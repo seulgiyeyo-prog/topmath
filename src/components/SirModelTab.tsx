@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { MathView } from './MathView';
 import { ShieldAlert, Star, Activity, Check } from 'lucide-react';
 
@@ -44,9 +44,11 @@ export const SirModelTab: React.FC<SirModelTabProps> = ({
   const isOverCapacity = peakInfected > capacity;
 
   // Check mission: keep within capacity with beta >= 0.3
-  if (!isOverCapacity && beta >= 0.3 && !isMissionCompleted) {
-    onCompleteMission(60, 3);
-  }
+  useEffect(() => {
+    if (!isOverCapacity && beta >= 0.3 && !isMissionCompleted) {
+      onCompleteMission(60, 3);
+    }
+  }, [isOverCapacity, beta, isMissionCompleted, onCompleteMission]);
 
   // Chart coordinates
   const W = 600;

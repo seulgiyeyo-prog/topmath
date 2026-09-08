@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { MathView } from './MathView';
 import { Microscope, Star, Check } from 'lucide-react';
 
@@ -38,9 +38,11 @@ export const CalculusTab: React.FC<CalculusTabProps> = ({
   }, [t0, effectiveH]);
 
   // Check mission
-  if (diff <= 1.0 && !isMissionCompleted) {
-    onCompleteMission(40, 3);
-  }
+  useEffect(() => {
+    if (diff <= 1.0 && !isMissionCompleted) {
+      onCompleteMission(40, 3);
+    }
+  }, [diff, isMissionCompleted, onCompleteMission]);
 
   // SVG dimensions
   const W = 600;

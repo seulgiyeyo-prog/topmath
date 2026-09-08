@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MathView } from '../MathView';
-import { Play, RotateCcw, Eye, Sparkles, HelpCircle } from 'lucide-react';
+import { Play, RotateCcw, Eye, Sparkles, HelpCircle, CheckCircle2 } from 'lucide-react';
 
 interface Point {
   x: number;
@@ -8,15 +8,15 @@ interface Point {
 }
 
 export const BilliardsTab: React.FC = () => {
-  // Table boundaries in SVG coords
-  const TABLE_LEFT = 50;
-  const TABLE_RIGHT = 550;
+  // 당구대 크기 및 좌표 (우측과 하단에 가상의 거울 당구대 및 대칭점이 보이도록 배치)
+  const TABLE_LEFT = 40;
+  const TABLE_RIGHT = 450;
   const TABLE_TOP = 40;
-  const TABLE_BOTTOM = 380;
+  const TABLE_BOTTOM = 280;
 
-  // Ball A (White ball, Cue), Ball B (Red ball, Target)
-  const [A, setA] = useState<Point>({ x: 120, y: 280 });
-  const [B, setB] = useState<Point>({ x: 420, y: 160 });
+  // 흰 공 (수구 A), 빨간 공 (목적구 B)
+  const [A, setA] = useState<Point>({ x: 120, y: 210 });
+  const [B, setB] = useState<Point>({ x: 360, y: 110 });
   const [showReflect, setShowReflect] = useState<boolean>(true);
   const [ballAnimPos, setBallAnimPos] = useState<Point | null>(null);
   const [isShooting, setIsShooting] = useState<boolean>(false);
@@ -28,43 +28,56 @@ export const BilliardsTab: React.FC = () => {
 
   const dist = (p: Point, q: Point) => Math.hypot(p.x - q.x, p.y - q.y);
 
-  // 2-Cushion reflection: Wall 1 = Bottom wall (y = TABLE_BOTTOM), Wall 2 = Right wall (x = TABLE_RIGHT)
-  // Step 1: Reflect Target B across Bottom Wall: B' = (B.x, 2 * TABLE_BOTTOM - B.y)
+  // ================= 2단 쿠션 엄밀 기하학 =================
+  // 경로: A -> P1 (바닥 벽) -> P2 (우측 벽) -> B
+  // 역추적(Backtracking) 기하학:
+  // 1단계: 목적구 B를 2차 충돌 벽인 '우측 쿠션(x = TABLE_RIGHT)'에 선대칭 -> B'
   const B_prime: Point = {
-    x: B.x,
-    y: 2 * TABLE_BOTTOM - B.y,
+    x: 2 * TABLE_RIGHT - B.x,
+    y: B.y,
   };
 
-  // Step 2: Reflect B' across Right Wall: B'' = (2 * TABLE_RIGHT - B_prime.x, B_prime.y)
+  // 2단계: 가상점 B'을 1차 충돌 벽인 '바닥 쿠션(y = TABLE_BOTTOM)'에 선대칭 -> B''
   const B_double_prime: Point = {
-    x: 2 * TABLE_RIGHT - B_prime.x,
-    y: B_prime.y,
+    x: B_prime.x,
+    y: 2 * TABLE_BOTTOM - B_prime.y,
   };
 
-  // Line from A to B'' intersects:
-  // 1. Bottom Wall (y = TABLE_BOTTOM) at P1
-  // y(t) = A.y + t * (B''.y - A.y) = TABLE_BOTTOM => t1 = (TABLE_BOTTOM - A.y) / (B''.y - A.y)
-  const t1 = (TABLE_BOTTOM - A.y) / (B_double_prime.y - A.y || 1);
+  // 3단계: 흰 공 A에서 최종 가상 목표 B''으로 곧바로 그은 직선이
+  //        1차 충돌 벽(바닥 쿠션 y = TABLE_BOTTOM)과 만나는 교점이 P1
+  const dyDouble = B_double_prime.y - A.y || 1;
+  const t1 = (TABLE_BOTTOM - A.y) / dyDouble;
   const P1: Point = {
     x: A.x + t1 * (B_double_prime.x - A.x),
     y: TABLE_BOTTOM,
   };
 
-  // 2. Line from P1 to B' intersects Right Wall (x = TABLE_RIGHT) at P2
-  // x(t) = P1.x + t * (B'.x - P1.x) = TABLE_RIGHT => t2 = (TABLE_RIGHT - P1.x) / (B_prime.x - P1.x)
-  const t2 = (TABLE_RIGHT - P1.x) / (B_prime.x - P1.x || 1);
+  // 4단계: P1에서 1차 가상 목표 B'으로 그은 직선이
+  //        2차 충돌 벽(우측 쿠션 x = TABLE_RIGHT)과 만나는 교점이 P2
+  const dxPrime = B_prime.x - P1.x || 1;
+  const t2 = (TABLE_RIGHT - P1.x) / dxPrime;
   const P2: Point = {
     x: TABLE_RIGHT,
     y: P1.y + t2 * (B_prime.y - P1.y),
   };
 
+  // 각 구간 거리
   const distA_P1 = dist(A, P1);
   const distP1_P2 = dist(P1, P2);
   const distP2_B = dist(P2, B);
   const totalBilliardDist = distA_P1 + distP1_P2 + distP2_B;
   const directDoublePrimeDist = dist(A, B_double_prime);
 
-  // Shoot ball animation along path: A -> P1 -> P2 -> B
+  // 충돌각(입사각/반사각) 계산
+  // P1 바닥 쿠션에서의 각도 (쿠션 수평선과의 각도)
+  const angleP1_in = Math.atan2(TABLE_BOTTOM - A.y, Math.abs(P1.x - A.x)) * (180 / Math.PI);
+  const angleP1_out = Math.atan2(TABLE_BOTTOM - P2.y, Math.abs(P2.x - P1.x)) * (180 / Math.PI);
+
+  // P2 우측 쿠션에서의 각도 (쿠션 수직선과의 각도)
+  const angleP2_in = Math.atan2(TABLE_RIGHT - P1.x, Math.abs(P2.y - P1.y)) * (180 / Math.PI);
+  const angleP2_out = Math.atan2(TABLE_RIGHT - B.x, Math.abs(B.y - P2.y)) * (180 / Math.PI);
+
+  // 당구공 샷 애니메이션: A -> P1 -> P2 -> B
   const shootBall = () => {
     if (isShooting) return;
     setIsShooting(true);
@@ -73,7 +86,7 @@ export const BilliardsTab: React.FC = () => {
     const path = [A, P1, P2, B];
     let currentLeg = 0;
     let t = 0;
-    const speed = 0.035;
+    const speed = 0.04;
 
     const animate = () => {
       t += speed;
@@ -109,8 +122,8 @@ export const BilliardsTab: React.FC = () => {
   const getPointerPos = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!svgRef.current) return { x: 0, y: 0 };
     const rect = svgRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 600;
-    const y = ((e.clientY - rect.top) / rect.height) * 420;
+    const x = ((e.clientX - rect.left) / rect.width) * 700;
+    const y = ((e.clientY - rect.top) / rect.height) * 480;
     return { x, y };
   };
 
@@ -123,8 +136,8 @@ export const BilliardsTab: React.FC = () => {
   const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!dragging) return;
     const pos = getPointerPos(e);
-    const clampedX = Math.max(TABLE_LEFT + 20, Math.min(TABLE_RIGHT - 40, pos.x));
-    const clampedY = Math.max(TABLE_TOP + 20, Math.min(TABLE_BOTTOM - 40, pos.y));
+    const clampedX = Math.max(TABLE_LEFT + 25, Math.min(TABLE_RIGHT - 25, pos.x));
+    const clampedY = Math.max(TABLE_TOP + 25, Math.min(TABLE_BOTTOM - 25, pos.y));
 
     if (dragging === 'A') setA({ x: clampedX, y: clampedY });
     else if (dragging === 'B') setB({ x: clampedX, y: clampedY });
@@ -143,7 +156,7 @@ export const BilliardsTab: React.FC = () => {
           </h2>
           <p className="text-xs sm:text-sm text-[#9FC0DC] mt-1">
             흰 공(A)으로 바닥 쿠션과 우측 쿠션을 차례로 맞혀 빨간 공(B)을 치는 최단 경로는 어떻게 찾을까요?{' '}
-            <strong className="text-[#E7A93D]">선대칭을 2번 연속 적용($B \to B' \to B''$)</strong>하는 기하학의 마법을 체험하세요!
+            <strong className="text-[#E7A93D]">선대칭을 2번 연속 적용($B \to B' \to B''$)</strong>하여 곧게 펴는 기하학의 마법을 체험하세요!
           </p>
         </div>
         {shotSuccess && (
@@ -159,13 +172,52 @@ export const BilliardsTab: React.FC = () => {
         <div className="lg:col-span-2 bg-[#0A1A18] border border-[#2C567F] rounded-xl p-2 relative overflow-hidden shadow-inner">
           <svg
             ref={svgRef}
-            viewBox="0 0 600 420"
+            viewBox="0 0 700 480"
             className="w-full h-auto select-none touch-none"
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
           >
-            {/* Billiard Table Felt Surface */}
+            {/* Virtual Mirror Tables (거울 대칭 가상 공간) */}
+            {showReflect && (
+              <g opacity={0.35}>
+                {/* 1차 우측 대칭 당구대 */}
+                <rect
+                  x={TABLE_RIGHT}
+                  y={TABLE_TOP}
+                  width={240}
+                  height={TABLE_BOTTOM - TABLE_TOP}
+                  fill="#0D2E24"
+                  stroke="#8B5A2B"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                />
+                {/* 2차 우측+하단 2중 대칭 당구대 */}
+                <rect
+                  x={TABLE_RIGHT}
+                  y={TABLE_BOTTOM}
+                  width={240}
+                  height={180}
+                  fill="#0B261E"
+                  stroke="#8B5A2B"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                />
+                {/* 하단 대칭 영역 */}
+                <rect
+                  x={TABLE_LEFT}
+                  y={TABLE_BOTTOM}
+                  width={TABLE_RIGHT - TABLE_LEFT}
+                  height={180}
+                  fill="#0B261E"
+                  stroke="#8B5A2B"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                />
+              </g>
+            )}
+
+            {/* Billiard Table Felt Surface (실제 당구대) */}
             <rect
               x={TABLE_LEFT}
               y={TABLE_TOP}
@@ -174,18 +226,17 @@ export const BilliardsTab: React.FC = () => {
               fill="#11382B"
               stroke="#8B5A2B"
               strokeWidth={12}
-              rx={16}
+              rx={12}
             />
 
-            {/* Inner Cushion Rails */}
+            {/* Inner Cushion Rails (쿠션 벽 하이라이트) */}
             <line
               x1={TABLE_LEFT}
               y1={TABLE_BOTTOM}
               x2={TABLE_RIGHT}
               y2={TABLE_BOTTOM}
               stroke="#F2B84B"
-              strokeWidth={3}
-              opacity={0.8}
+              strokeWidth={3.5}
             />
             <line
               x1={TABLE_RIGHT}
@@ -193,14 +244,13 @@ export const BilliardsTab: React.FC = () => {
               x2={TABLE_RIGHT}
               y2={TABLE_BOTTOM}
               stroke="#F2B84B"
-              strokeWidth={3}
-              opacity={0.8}
+              strokeWidth={3.5}
             />
 
             {/* Cushion Wall Labels */}
             <text
               x={(TABLE_LEFT + TABLE_RIGHT) / 2}
-              y={TABLE_BOTTOM - 8}
+              y={TABLE_BOTTOM - 10}
               fill="#F2B84B"
               fontSize={11}
               fontWeight={700}
@@ -210,7 +260,7 @@ export const BilliardsTab: React.FC = () => {
               1차 쿠션 (바닥 벽)
             </text>
             <text
-              x={TABLE_RIGHT - 8}
+              x={TABLE_RIGHT - 10}
               y={(TABLE_TOP + TABLE_BOTTOM) / 2}
               fill="#F2B84B"
               fontSize={11}
@@ -221,19 +271,20 @@ export const BilliardsTab: React.FC = () => {
               2차 쿠션 (우측 벽)
             </text>
 
-            {/* 2-Step Reflection Construction Lines */}
+            {/* 2-Step Reflection Construction Lines (2단계 대칭 작도선) */}
             {showReflect && (
-              <g opacity={0.85}>
-                {/* Direct line from A to B'' */}
+              <g opacity={0.9}>
+                {/* Direct line from A to B'' (펼친 일직선 최단 경로!) */}
                 <line
                   x1={A.x}
                   y1={A.y}
                   x2={B_double_prime.x}
                   y2={B_double_prime.y}
                   stroke="#E7A93D"
-                  strokeWidth={1.8}
-                  strokeDasharray="5 4"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
                 />
+
                 {/* Line from P1 to B' */}
                 <line
                   x1={P1.x}
@@ -241,68 +292,72 @@ export const BilliardsTab: React.FC = () => {
                   x2={B_prime.x}
                   y2={B_prime.y}
                   stroke="#6FCF97"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 3"
+                  strokeWidth={1.8}
+                  strokeDasharray="5 3"
                 />
-                {/* Reflection normal lines */}
+
+                {/* Reflection normal lines: B -> B' across Right Wall */}
                 <line
                   x1={B.x}
                   y1={B.y}
                   x2={B_prime.x}
                   y2={B_prime.y}
-                  stroke="#9FC0DC"
-                  strokeWidth={1}
-                  strokeDasharray="2 2"
+                  stroke="#7FC4EE"
+                  strokeWidth={1.5}
+                  strokeDasharray="3 3"
                 />
+
+                {/* Reflection normal lines: B' -> B'' across Bottom Wall */}
                 <line
                   x1={B_prime.x}
                   y1={B_prime.y}
                   x2={B_double_prime.x}
                   y2={B_double_prime.y}
-                  stroke="#9FC0DC"
-                  strokeWidth={1}
-                  strokeDasharray="2 2"
+                  stroke="#7FC4EE"
+                  strokeWidth={1.5}
+                  strokeDasharray="3 3"
                 />
 
-                {/* Ghost Virtual Balls */}
+                {/* Ghost Virtual Ball B' */}
                 <circle
                   cx={B_prime.x}
                   cy={B_prime.y}
-                  r={8}
+                  r={10}
                   fill="none"
-                  stroke="#E8654F"
-                  strokeWidth={1.5}
-                  strokeDasharray="2 2"
-                />
-                <text
-                  x={B_prime.x + 10}
-                  y={B_prime.y + 4}
-                  fill="#E8654F"
-                  fontSize={11}
-                  fontWeight={700}
-                  fontFamily="JetBrains Mono"
-                >
-                  B' (1차 대칭)
-                </text>
-
-                <circle
-                  cx={B_double_prime.x}
-                  cy={B_double_prime.y}
-                  r={9}
-                  fill="none"
-                  stroke="#E7A93D"
+                  stroke="#6FCF97"
                   strokeWidth={2}
                   strokeDasharray="3 3"
                 />
                 <text
-                  x={B_double_prime.x - 30}
-                  y={B_double_prime.y - 12}
+                  x={B_prime.x + 14}
+                  y={B_prime.y + 4}
+                  fill="#6FCF97"
+                  fontSize={11}
+                  fontWeight={700}
+                  fontFamily="JetBrains Mono"
+                >
+                  B' (우측 대칭)
+                </text>
+
+                {/* Ghost Virtual Ball B'' */}
+                <circle
+                  cx={B_double_prime.x}
+                  cy={B_double_prime.y}
+                  r={11}
+                  fill="none"
+                  stroke="#E7A93D"
+                  strokeWidth={2.5}
+                  strokeDasharray="4 3"
+                />
+                <text
+                  x={B_double_prime.x + 14}
+                  y={B_double_prime.y + 4}
                   fill="#E7A93D"
                   fontSize={11}
                   fontWeight={700}
                   fontFamily="JetBrains Mono"
                 >
-                  B'' (2차 대칭)
+                  B'' (2중 대칭 조준점)
                 </text>
               </g>
             )}
@@ -314,7 +369,7 @@ export const BilliardsTab: React.FC = () => {
               x2={P1.x}
               y2={P1.y}
               stroke="#EAF3FC"
-              strokeWidth={2.5}
+              strokeWidth={3}
             />
             <line
               x1={P1.x}
@@ -322,7 +377,7 @@ export const BilliardsTab: React.FC = () => {
               x2={P2.x}
               y2={P2.y}
               stroke="#EAF3FC"
-              strokeWidth={2.5}
+              strokeWidth={3}
             />
             <line
               x1={P2.x}
@@ -330,31 +385,32 @@ export const BilliardsTab: React.FC = () => {
               x2={B.x}
               y2={B.y}
               stroke="#EAF3FC"
-              strokeWidth={2.5}
+              strokeWidth={3}
             />
 
             {/* Cushion Impact Points P1 and P2 */}
-            <circle cx={P1.x} cy={P1.y} r={5} fill="#F2B84B" stroke="#0A1A18" strokeWidth={1.5} />
+            <circle cx={P1.x} cy={P1.y} r={6} fill="#F2B84B" stroke="#0A1A18" strokeWidth={2} />
             <text
               x={P1.x}
-              y={P1.y + 16}
+              y={P1.y + 18}
               fill="#F2B84B"
-              fontSize={10}
+              fontSize={11}
               fontWeight={700}
               textAnchor="middle"
             >
-              P₁
+              P₁ ({angleP1_in.toFixed(1)}° = {angleP1_out.toFixed(1)}°)
             </text>
 
-            <circle cx={P2.x} cy={P2.y} r={5} fill="#F2B84B" stroke="#0A1A18" strokeWidth={1.5} />
+            <circle cx={P2.x} cy={P2.y} r={6} fill="#F2B84B" stroke="#0A1A18" strokeWidth={2} />
             <text
-              x={P2.x + 14}
-              y={P2.y + 3}
+              x={P2.x - 12}
+              y={P2.y - 10}
               fill="#F2B84B"
-              fontSize={10}
+              fontSize={11}
               fontWeight={700}
+              textAnchor="end"
             >
-              P₂
+              P₂ ({angleP2_in.toFixed(1)}° = {angleP2_out.toFixed(1)}°)
             </text>
 
             {/* Draggable Ball A (White ball) */}
@@ -365,16 +421,16 @@ export const BilliardsTab: React.FC = () => {
               <circle
                 cx={A.x}
                 cy={A.y}
-                r={12}
+                r={13}
                 fill="#FFFFFF"
-                stroke="#333333"
-                strokeWidth={2.5}
+                stroke="#1A3B34"
+                strokeWidth={3}
               />
               <text
                 x={A.x}
                 y={A.y + 4}
                 fill="#111111"
-                fontSize={11}
+                fontSize={12}
                 fontWeight={800}
                 textAnchor="middle"
                 pointerEvents="none"
@@ -391,16 +447,16 @@ export const BilliardsTab: React.FC = () => {
               <circle
                 cx={B.x}
                 cy={B.y}
-                r={12}
+                r={13}
                 fill="#E8654F"
                 stroke="#FFFFFF"
-                strokeWidth={2}
+                strokeWidth={2.5}
               />
               <text
                 x={B.x}
                 y={B.y + 4}
                 fill="#FFFFFF"
-                fontSize={11}
+                fontSize={12}
                 fontWeight={800}
                 textAnchor="middle"
                 pointerEvents="none"
@@ -414,10 +470,10 @@ export const BilliardsTab: React.FC = () => {
               <circle
                 cx={ballAnimPos.x}
                 cy={ballAnimPos.y}
-                r={10}
+                r={11}
                 fill="#FFFFFF"
                 stroke="#E7A93D"
-                strokeWidth={3}
+                strokeWidth={3.5}
               />
             )}
           </svg>
@@ -455,6 +511,14 @@ export const BilliardsTab: React.FC = () => {
                   {directDoublePrimeDist.toFixed(1)}
                 </b>
               </div>
+
+              {/* Verified Equality Badge */}
+              <div className="mt-2 p-2 rounded bg-[#0E2A45] border border-[#6FCF97]/40 flex items-center gap-2 text-xs text-[#6FCF97]">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>
+                  <strong>실제 경로 = 펼친 직선거리:</strong> 두 거리가 완전히 일치합니다!
+                </span>
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -462,7 +526,7 @@ export const BilliardsTab: React.FC = () => {
               <button
                 onClick={shootBall}
                 disabled={isShooting}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-[#E7A93D] hover:bg-[#d6992d] text-[#0E2A45] font-bold text-xs transition-colors cursor-pointer shadow-sm"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-gradient-to-r from-[#E7A93D] to-[#6FCF97] hover:brightness-110 text-[#0E2A45] font-bold text-xs transition-all cursor-pointer shadow-sm"
               >
                 <Play className="w-4 h-4 fill-current" />
                 <span>당구 샷 발사하기! (2단 쿠션 명중)</span>
@@ -485,20 +549,18 @@ export const BilliardsTab: React.FC = () => {
               </div>
               <p className="text-[#9FC0DC] leading-relaxed mb-2">
                 "벽을 튕길 때마다 거울에 비친 가상의 상(Image)을 만듭니다.
-                벽 2개를 튕기면 목표물 <MathView math="B" inline />를 2번 대칭 이동시킨 가상의 목표 <MathView math="B''" inline />를 향해
-                직선으로 쏘면 됩니다!"
+                2번 튕기려면 목표물 <MathView math="B" inline />를 2번 대칭시킨 <MathView math="B''" inline />를 향해 곧바로 조준하면 됩니다!"
               </p>
               <details className="cursor-pointer">
                 <summary className="text-[#6FCF97] font-semibold hover:underline select-none">
-                  💡 빛의 반사와 페르마 원리
+                  💡 입사각=반사각과 페르마 원리
                 </summary>
-                <div className="mt-2 p-2.5 rounded bg-[#1B4468] text-[#EAF3FC] space-y-1 leading-relaxed">
+                <div className="mt-2 p-2.5 rounded bg-[#1B4468] text-[#EAF3FC] space-y-1.5 leading-relaxed text-[11px]">
                   <div>
-                    1. <strong>입사각 = 반사각</strong>: 쿠션에서 튕겨 나갈 때의 각도는 들어올 때의 각도와 같습니다.
+                    1. <strong>각도 보존</strong>: 1차 쿠션 P₁과 2차 쿠션 P₂에서 모두 입사각과 반사각이 정확히 같습니다.
                   </div>
                   <div>
-                    2. 이것은 빛이 최소 시간으로 이동하는 '페르마의 최소 시간 원리'와 동일하며,
-                    기하학적으로는 <MathView math="AP_1 + P_1P_2 + P_2B = AB''" inline />로 전개된 직선이 되기 때문에 완벽한 최단 경로가 됩니다!
+                    2. <strong>최단 거리</strong>: <MathView math="AP_1 + P_1P_2 + P_2B = AB''" inline />로 전개된 직선이 되므로, 에너지를 가장 적게 들이고 도달하는 자연의 최단 경로입니다.
                   </div>
                 </div>
               </details>
