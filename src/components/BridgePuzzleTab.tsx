@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Scissors, Play, RotateCcw, CheckCircle2, AlertTriangle, Sparkles, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Scissors, Play, RotateCcw, CheckCircle2, AlertTriangle, Sparkles, HelpCircle, Building2, Stethoscope, Plane, Server, School } from 'lucide-react';
 
-interface Node {
+interface ScenarioNode {
   id: number;
   label: string;
   x: number;
@@ -9,65 +9,273 @@ interface Node {
   group: 'A' | 'B';
 }
 
-interface Edge {
+interface ScenarioEdge {
   from: number;
   to: number;
   isBridge?: boolean;
 }
 
+interface BridgeScenario {
+  id: string;
+  title: string;
+  subtitle: string;
+  badge: string;
+  icon: 'school' | 'hospital' | 'city' | 'server' | 'plane';
+  groupAName: string;
+  groupBName: string;
+  patientZero: number;
+  patientZeroLabel: string;
+  maxCuts: number;
+  story: string;
+  mathLesson: string;
+  nodes: ScenarioNode[];
+  edges: ScenarioEdge[];
+}
+
 export const BridgePuzzleTab: React.FC<{
   onCompleteMission?: (xp: number, stars: number) => void;
   isMissionCompleted?: boolean;
-}> = ({ onCompleteMission, isMissionCompleted }) => {
-  // 2 Communities (Group A: School A, Group B: School B)
-  const nodes: Node[] = [
-    // Group A (Left School)
-    { id: 0, label: 'A1', x: 100, y: 130, group: 'A' },
-    { id: 1, label: 'A2', x: 190, y: 90, group: 'A' },
-    { id: 2, label: 'A3 (감염원)', x: 110, y: 280, group: 'A' },
-    { id: 3, label: 'A4', x: 210, y: 220, group: 'A' },
-    { id: 4, label: 'A5 (허브)', x: 230, y: 320, group: 'A' },
+}> = ({ onCompleteMission }) => {
+  const SCENARIOS: BridgeScenario[] = [
+    {
+      id: 'school',
+      title: 'A학교 vs B학교 커뮤니티',
+      subtitle: '기본 2-클러스터 다리 끊기',
+      badge: '🏫 학교 간 교류',
+      icon: 'school',
+      groupAName: 'A학교 커뮤니티 (감염 발생)',
+      groupBName: 'B학교 커뮤니티 (보호 대상)',
+      patientZero: 2,
+      patientZeroLabel: 'A3 학생',
+      maxCuts: 2,
+      story: 'A학교 동아리방에서 감염 발생! 두 학교를 잇는 2개의 동아리 교류 다리를 찾아 끊으면 B학교 5명 전원을 완벽히 지킬 수 있습니다.',
+      mathLesson: '그래프 이론에서 서로 다른 두 클러스터를 잇는 적은 수의 선을 "브릿지(Bridge)"라고 부릅니다. 이 다리만 차단하면 전체를 격리하지 않고도 확산을 막을 수 있습니다.',
+      nodes: [
+        // Group A (Left School)
+        { id: 0, label: 'A1', x: 100, y: 130, group: 'A' },
+        { id: 1, label: 'A2', x: 190, y: 90, group: 'A' },
+        { id: 2, label: 'A3 (감염원)', x: 110, y: 280, group: 'A' },
+        { id: 3, label: 'A4', x: 210, y: 210, group: 'A' },
+        { id: 4, label: 'A5 (허브)', x: 220, y: 320, group: 'A' },
 
-    // Group B (Right School)
-    { id: 5, label: 'B1 (허브)', x: 370, y: 140, group: 'B' },
-    { id: 6, label: 'B2', x: 470, y: 90, group: 'B' },
-    { id: 7, label: 'B3', x: 490, y: 210, group: 'B' },
-    { id: 8, label: 'B4', x: 380, y: 280, group: 'B' },
-    { id: 9, label: 'B5', x: 480, y: 330, group: 'B' },
+        // Group B (Right School)
+        { id: 5, label: 'B1 (허브)', x: 380, y: 130, group: 'B' },
+        { id: 6, label: 'B2', x: 480, y: 90, group: 'B' },
+        { id: 7, label: 'B3', x: 490, y: 210, group: 'B' },
+        { id: 8, label: 'B4', x: 390, y: 290, group: 'B' },
+        { id: 9, label: 'B5', x: 490, y: 330, group: 'B' },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 1, to: 3 },
+        { from: 2, to: 3 },
+        { from: 2, to: 4 },
+        { from: 3, to: 4 },
+        { from: 1, to: 5, isBridge: true },
+        { from: 4, to: 8, isBridge: true },
+        { from: 5, to: 6 },
+        { from: 5, to: 7 },
+        { from: 6, to: 7 },
+        { from: 7, to: 8 },
+        { from: 7, to: 9 },
+        { from: 8, to: 9 },
+      ],
+    },
+    {
+      id: 'hospital',
+      title: '종합병원 감염내과 & 일반병동',
+      subtitle: '원내 집단감염 음압 방화벽',
+      badge: '🏥 의료 클러스터',
+      icon: 'hospital',
+      groupAName: '응급실 & 선별진료 구역',
+      groupBName: '일반병동 & 중환자실 (보호 대상)',
+      patientZero: 1,
+      patientZeroLabel: 'ER 내원환자',
+      maxCuts: 2,
+      story: '응급실에 고열 환자가 내원했습니다! 본관 병동과 중환자실로 통하는 중앙 복도 차단문(음압 방화벽) 2곳을 폐쇄하여 원내 전파를 막으세요.',
+      mathLesson: '병원 감염관리는 "구역화(Zoning)" 기법을 사용합니다. 취약 계층이 모여있는 일반병동으로 통하는 병목 통로를 신속히 격리하는 원리입니다.',
+      nodes: [
+        { id: 0, label: '접수처', x: 100, y: 130, group: 'A' },
+        { id: 1, label: '응급환자', x: 100, y: 270, group: 'A' },
+        { id: 2, label: 'ER 간호과', x: 200, y: 130, group: 'A' },
+        { id: 3, label: 'ER 이송통로', x: 200, y: 270, group: 'A' },
+
+        { id: 4, label: '중앙스테이션', x: 380, y: 130, group: 'B' },
+        { id: 5, label: '중환자실(ICU)', x: 480, y: 90, group: 'B' },
+        { id: 6, label: '일반병동 101', x: 490, y: 180, group: 'B' },
+        { id: 7, label: '본관 물류실', x: 380, y: 280, group: 'B' },
+        { id: 8, label: '일반병동 102', x: 490, y: 270, group: 'B' },
+        { id: 9, label: '재활치료실', x: 470, y: 340, group: 'B' },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 1, to: 3 },
+        { from: 2, to: 3 },
+        // Bridges connecting ER to Main Ward
+        { from: 2, to: 4, isBridge: true },
+        { from: 3, to: 7, isBridge: true },
+        { from: 4, to: 5 },
+        { from: 4, to: 6 },
+        { from: 5, to: 6 },
+        { from: 6, to: 8 },
+        { from: 7, to: 8 },
+        { from: 7, to: 9 },
+        { from: 8, to: 9 },
+      ],
+    },
+    {
+      id: 'city',
+      title: '광역 교통망 & 물류 터미널',
+      subtitle: '고속도로 관문 선제 차단',
+      badge: '🏙️ 도시 간 방역',
+      icon: 'city',
+      groupAName: '발원 도시 A (물류산단)',
+      groupBName: '청정 도시 B (보호 대상)',
+      patientZero: 0,
+      patientZeroLabel: 'A 물류센터',
+      maxCuts: 2,
+      story: '발원 도시의 화물 물류센터에서 확진 발생! 인접한 청정 도시로 향하는 2개의 고속도로 IC 요금소를 차단하여 바이러스 유입을 막으세요.',
+      mathLesson: '도시 간 전파는 이동량(Traffic)이 집중되는 간선도로를 따라 발생합니다. 교통망 그래프에서 절단점(Cut Edge)을 제어하는 최소 컷(Min-Cut) 알고리즘입니다.',
+      nodes: [
+        { id: 0, label: '물류센터', x: 90, y: 120, group: 'A' },
+        { id: 1, label: 'A공단', x: 90, y: 270, group: 'A' },
+        { id: 2, label: 'A 북부IC', x: 200, y: 110, group: 'A' },
+        { id: 3, label: 'A 남부IC', x: 200, y: 290, group: 'A' },
+
+        { id: 4, label: 'B 북부톨게이트', x: 380, y: 110, group: 'B' },
+        { id: 5, label: 'B 시청', x: 480, y: 90, group: 'B' },
+        { id: 6, label: 'B 대학교', x: 480, y: 180, group: 'B' },
+        { id: 7, label: 'B 남부톨게이트', x: 380, y: 290, group: 'B' },
+        { id: 8, label: 'B 주거단지', x: 490, y: 280, group: 'B' },
+        { id: 9, label: 'B KTX역', x: 420, y: 350, group: 'B' },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 1, to: 3 },
+        { from: 2, to: 3 },
+        // Bridges between City A and City B
+        { from: 2, to: 4, isBridge: true },
+        { from: 3, to: 7, isBridge: true },
+        { from: 4, to: 5 },
+        { from: 4, to: 6 },
+        { from: 5, to: 6 },
+        { from: 6, to: 8 },
+        { from: 7, to: 8 },
+        { from: 7, to: 9 },
+        { from: 8, to: 9 },
+      ],
+    },
+    {
+      id: 'server',
+      title: '기업 사내망 & 핵심 고객 DB',
+      subtitle: '랜섬웨어 방화벽 망분리',
+      badge: '💻 사이버 보안',
+      icon: 'server',
+      groupAName: '사원 업무망 PC (침투 발생)',
+      groupBName: '고객 DB & 결제 서버 (보호 대상)',
+      patientZero: 1,
+      patientZeroLabel: '피싱 클릭 PC',
+      maxCuts: 2,
+      story: '사원이 피싱 이메일을 열어 사내 PC 1대가 랜섬웨어에 감염되었습니다! 핵심 결제 서버와 고객 DB망으로 연결된 게이트웨이 포트 2개를 차단하세요.',
+      mathLesson: '컴퓨터 보안의 방화벽(Firewall)은 질병의 역학 조사와 완전히 동일한 그래프 이론을 따릅니다. 위험 망과 보안 망 사이의 통로를 격리하는 망분리 기술입니다.',
+      nodes: [
+        { id: 0, label: '사원 PC1', x: 100, y: 120, group: 'A' },
+        { id: 1, label: '감염 PC2', x: 100, y: 270, group: 'A' },
+        { id: 2, label: '내부 라우터1', x: 200, y: 130, group: 'A' },
+        { id: 3, label: '내부 라우터2', x: 200, y: 270, group: 'A' },
+
+        { id: 4, label: '보안 방화벽', x: 380, y: 130, group: 'B' },
+        { id: 5, label: '인증 서버', x: 480, y: 90, group: 'B' },
+        { id: 6, label: '고객 DB', x: 490, y: 180, group: 'B' },
+        { id: 7, label: '결제 게이트웨이', x: 380, y: 280, group: 'B' },
+        { id: 8, label: '금융 결제망', x: 490, y: 270, group: 'B' },
+        { id: 9, label: '백업 볼트', x: 470, y: 340, group: 'B' },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 1, to: 3 },
+        { from: 2, to: 3 },
+        // Firewall Bridges
+        { from: 2, to: 4, isBridge: true },
+        { from: 3, to: 7, isBridge: true },
+        { from: 4, to: 5 },
+        { from: 4, to: 6 },
+        { from: 5, to: 6 },
+        { from: 6, to: 8 },
+        { from: 7, to: 8 },
+        { from: 7, to: 9 },
+        { from: 8, to: 9 },
+      ],
+    },
+    {
+      id: 'plane',
+      title: '글로벌 항공 허브 & 국경 방역',
+      subtitle: '국제선 직항 노선 입국 통제',
+      badge: '✈️ 팬데믹 국경 방역',
+      icon: 'plane',
+      groupAName: '해외 유행국 공항망',
+      groupBName: '국내 5대 거점 공항 (보호 대상)',
+      patientZero: 0,
+      patientZeroLabel: '해외 공항 A',
+      maxCuts: 2,
+      story: '해외에서 변이 바이러스가 급속 확산 중입니다! 국내 거점 공항으로 직행하는 직항 노선 2개를 신속히 찾아 입국 제한을 시행하세요.',
+      mathLesson: '현대 팬데믹은 지리적 거리보다 "항공망 연결도"에 비례해 퍼집니다. 슈퍼스프레더 허브 공항 간의 직항 노선을 제어하는 것이 국경 방역의 핵심입니다.',
+      nodes: [
+        { id: 0, label: '해외 공항 A', x: 90, y: 120, group: 'A' },
+        { id: 1, label: '해외 공항 B', x: 90, y: 270, group: 'A' },
+        { id: 2, label: '해외 허브 1', x: 200, y: 120, group: 'A' },
+        { id: 3, label: '해외 허브 2', x: 200, y: 280, group: 'A' },
+
+        { id: 4, label: '인천국제공항', x: 380, y: 120, group: 'B' },
+        { id: 5, label: '김포공항', x: 480, y: 90, group: 'B' },
+        { id: 6, label: '청주공항', x: 490, y: 180, group: 'B' },
+        { id: 7, label: '김해국제공항', x: 380, y: 280, group: 'B' },
+        { id: 8, label: '대구공항', x: 490, y: 270, group: 'B' },
+        { id: 9, label: '제주공항', x: 470, y: 340, group: 'B' },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 1, to: 3 },
+        { from: 2, to: 3 },
+        // International Flight Bridges
+        { from: 2, to: 4, isBridge: true },
+        { from: 3, to: 7, isBridge: true },
+        { from: 4, to: 5 },
+        { from: 4, to: 6 },
+        { from: 5, to: 6 },
+        { from: 6, to: 8 },
+        { from: 7, to: 8 },
+        { from: 7, to: 9 },
+        { from: 8, to: 9 },
+      ],
+    },
   ];
 
-  // Initial edges. Bridges between A and B are (1-5) and (4-8)
-  const initialEdges: Edge[] = [
-    // Intra Group A
-    { from: 0, to: 1 },
-    { from: 0, to: 2 },
-    { from: 1, to: 3 },
-    { from: 2, to: 3 },
-    { from: 2, to: 4 },
-    { from: 3, to: 4 },
-
-    // Bridges connecting Group A and Group B!
-    { from: 1, to: 5, isBridge: true },
-    { from: 4, to: 8, isBridge: true },
-
-    // Intra Group B
-    { from: 5, to: 6 },
-    { from: 5, to: 7 },
-    { from: 6, to: 7 },
-    { from: 7, to: 8 },
-    { from: 7, to: 9 },
-    { from: 8, to: 9 },
-  ];
-
-  const edgeKey = (u: number, v: number) => (u < v ? `${u}-${v}` : `${v}-${u}`);
+  const [currentScenarioId, setCurrentScenarioId] = useState<string>('school');
+  const scenario = SCENARIOS.find((s) => s.id === currentScenarioId) || SCENARIOS[0];
 
   const [cutEdges, setCutEdges] = useState<Set<string>>(new Set());
-  const [infectedNodes, setInfectedNodes] = useState<Set<number>>(new Set([2])); // Node 2 is patient zero
+  const [infectedNodes, setInfectedNodes] = useState<Set<number>>(new Set([scenario.patientZero]));
   const [simulating, setSimulating] = useState<boolean>(false);
   const [stageCleared, setStageCleared] = useState<boolean>(false);
   const [breached, setBreached] = useState<boolean>(false);
 
-  const maxCuts = 2;
+  const edgeKey = (u: number, v: number) => (u < v ? `${u}-${v}` : `${v}-${u}`);
+
+  const handleSelectScenario = (id: string) => {
+    setCurrentScenarioId(id);
+    const target = SCENARIOS.find((s) => s.id === id) || SCENARIOS[0];
+    setCutEdges(new Set());
+    setInfectedNodes(new Set([target.patientZero]));
+    setSimulating(false);
+    setStageCleared(false);
+    setBreached(false);
+  };
 
   const handleToggleCut = (u: number, v: number) => {
     if (simulating) return;
@@ -77,8 +285,8 @@ export const BridgePuzzleTab: React.FC<{
       if (next.has(k)) {
         next.delete(k);
       } else {
-        if (next.size >= maxCuts) {
-          alert(`방화벽 가위는 최대 ${maxCuts}개의 연결선만 자를 수 있습니다!`);
+        if (next.size >= scenario.maxCuts) {
+          alert(`방화벽 가위는 최대 ${scenario.maxCuts}개의 연결선만 자를 수 있습니다!`);
           return prev;
         }
         next.add(k);
@@ -87,17 +295,17 @@ export const BridgePuzzleTab: React.FC<{
     });
     setStageCleared(false);
     setBreached(false);
-    setInfectedNodes(new Set([2]));
+    setInfectedNodes(new Set([scenario.patientZero]));
   };
 
-  // Run infection spread
+  // Run infection spread simulation
   const runSpread = () => {
     setSimulating(true);
-    setInfectedNodes(new Set([2]));
+    setInfectedNodes(new Set([scenario.patientZero]));
     setStageCleared(false);
     setBreached(false);
 
-    let currentInfected = new Set<number>([2]);
+    let currentInfected = new Set<number>([scenario.patientZero]);
     let step = 0;
 
     const interval = setInterval(() => {
@@ -105,7 +313,7 @@ export const BridgePuzzleTab: React.FC<{
       const nextInfected = new Set<number>(currentInfected);
 
       currentInfected.forEach((u) => {
-        initialEdges.forEach((e) => {
+        scenario.edges.forEach((e) => {
           const k = edgeKey(e.from, e.to);
           if (cutEdges.has(k)) return; // blocked by firewall!
 
@@ -117,8 +325,11 @@ export const BridgePuzzleTab: React.FC<{
       setInfectedNodes(new Set(nextInfected));
       currentInfected = nextInfected;
 
-      // Check if Group B breached
-      const groupBInfected = Array.from(currentInfected).some((id) => id >= 5);
+      // Check if any node in Group B got infected
+      const groupBInfected = Array.from(currentInfected).some((id) => {
+        const node = scenario.nodes[id];
+        return node && node.group === 'B';
+      });
 
       if (groupBInfected) {
         clearInterval(interval);
@@ -130,23 +341,39 @@ export const BridgePuzzleTab: React.FC<{
         setStageCleared(true);
         if (onCompleteMission) onCompleteMission(50, 3);
       }
-    }, 600);
+    }, 550);
   };
 
   const resetPuzzle = () => {
     setCutEdges(new Set());
-    setInfectedNodes(new Set([2]));
+    setInfectedNodes(new Set([scenario.patientZero]));
     setSimulating(false);
     setStageCleared(false);
     setBreached(false);
   };
 
+  const renderIcon = (type: string) => {
+    switch (type) {
+      case 'hospital':
+        return <Stethoscope className="w-3.5 h-3.5 text-[#4ADE80]" />;
+      case 'city':
+        return <Building2 className="w-3.5 h-3.5 text-[#E7A93D]" />;
+      case 'server':
+        return <Server className="w-3.5 h-3.5 text-[#C084FC]" />;
+      case 'plane':
+        return <Plane className="w-3.5 h-3.5 text-[#7FC4EE]" />;
+      default:
+        return <School className="w-3.5 h-3.5 text-[#F2B84B]" />;
+    }
+  };
+
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between mb-4 border-b border-[#234E47] pb-3">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between mb-3 border-b border-[#234E47] pb-3">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold font-serif text-[#EAFBF6]">
-            방화벽 브릿지 퍼즐 (6단계의 법칙과 핵심 다리 차단)
+            방화벽 브릿지 퍼즐 🛡️
           </h2>
           <p className="text-xs sm:text-sm text-[#7DBFB0] mt-1">
             "세상 사람들은 평균 6명만 거치면 모두 연결된다(작은 세상 네트워크)." 반대로,{' '}
@@ -156,9 +383,44 @@ export const BridgePuzzleTab: React.FC<{
         {stageCleared && (
           <span className="mt-2 sm:mt-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#4ADE80]/20 border border-[#4ADE80] text-[#4ADE80] text-xs font-bold animate-bounce">
             <Sparkles className="w-3.5 h-3.5" />
-            B학교 감염율 0%! 방화벽 격리 성공!
+            보호 구역 감염율 0%! 방화벽 격리 성공!
           </span>
         )}
+      </div>
+
+      {/* 5 Scenario Selector Pills */}
+      <div className="mb-4 bg-[#0A1A18] border border-[#234E47] rounded-xl p-2 shadow-sm">
+        <div className="text-[11px] font-bold text-[#EAFBF6] mb-1.5 px-1 flex items-center gap-1.5">
+          <Shield className="w-3.5 h-3.5 text-[#F2B84B]" />
+          <span>도전할 방화벽 시나리오 선택 (총 5개 예시):</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5">
+          {SCENARIOS.map((s) => {
+            const isSelected = currentScenarioId === s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={() => handleSelectScenario(s.id)}
+                className={`p-2 rounded-lg text-left transition-all cursor-pointer border ${
+                  isSelected
+                    ? 'bg-[#1D4A3E] border-[#F2B84B] shadow-md ring-1 ring-[#F2B84B]/50'
+                    : 'bg-[#132E29] border-[#234E47] hover:bg-[#1A3D37] text-[#7DBFB0]'
+                }`}
+              >
+                <div className="flex items-center gap-1">
+                  {renderIcon(s.icon)}
+                  <span className="text-[10px] font-mono text-[#F2B84B] font-bold">{s.badge}</span>
+                </div>
+                <div className={`text-xs font-bold mt-1 truncate ${isSelected ? 'text-[#EAFBF6]' : 'text-[#7DBFB0]'}`}>
+                  {s.title}
+                </div>
+                <div className="text-[10px] text-[#7DBFB0]/80 truncate mt-0.5">
+                  {s.subtitle}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -166,27 +428,28 @@ export const BridgePuzzleTab: React.FC<{
         <div className="lg:col-span-2 bg-[#0A1A18] border border-[#234E47] rounded-xl p-2 relative overflow-hidden shadow-inner">
           <svg viewBox="0 0 600 420" className="w-full h-auto select-none">
             {/* Background Group Zones */}
-            <rect x="50" y="50" width="220" height="320" rx="20" fill="#132E29" opacity="0.5" />
-            <text x="160" y="75" fill="#3FA796" fontSize="12" fontWeight="bold" textAnchor="middle">
-              A학교 커뮤니티
+            <rect x="40" y="50" width="230" height="325" rx="20" fill="#132E29" opacity="0.5" />
+            <text x="155" y="75" fill="#3FA796" fontSize="12" fontWeight="bold" textAnchor="middle">
+              {scenario.groupAName}
             </text>
 
-            <rect x="330" y="50" width="220" height="320" rx="20" fill="#153A5C" opacity="0.4" />
-            <text x="440" y="75" fill="#7FC4EE" fontSize="12" fontWeight="bold" textAnchor="middle">
-              B학교 커뮤니티 (보호 대상)
+            <rect x="330" y="50" width="230" height="325" rx="20" fill="#153A5C" opacity="0.4" />
+            <text x="445" y="75" fill="#7FC4EE" fontSize="12" fontWeight="bold" textAnchor="middle">
+              {scenario.groupBName}
             </text>
 
             {/* Edges */}
-            {initialEdges.map((e) => {
-              const u = nodes[e.from];
-              const v = nodes[e.to];
+            {scenario.edges.map((e) => {
+              const u = scenario.nodes[e.from];
+              const v = scenario.nodes[e.to];
+              if (!u || !v) return null;
               const k = edgeKey(e.from, e.to);
               const isCut = cutEdges.has(k);
 
               return (
                 <g key={k} onClick={() => handleToggleCut(e.from, e.to)} className="cursor-pointer group">
                   {/* Invisible thicker stroke for easy clicking */}
-                  <line x1={u.x} y1={u.y} x2={v.x} y2={v.y} stroke="transparent" strokeWidth={16} />
+                  <line x1={u.x} y1={u.y} x2={v.x} y2={v.y} stroke="transparent" strokeWidth={18} />
 
                   <line
                     x1={u.x}
@@ -200,8 +463,8 @@ export const BridgePuzzleTab: React.FC<{
                         ? '#F2B84B'
                         : '#234E47'
                     }
-                    strokeWidth={e.isBridge ? 3.5 : 2}
-                    strokeDasharray={isCut ? '4 4' : undefined}
+                    strokeWidth={e.isBridge ? 4 : 2}
+                    strokeDasharray={isCut ? '5 4' : undefined}
                     className="transition-colors group-hover:stroke-[#F2B84B]"
                   />
 
@@ -219,14 +482,15 @@ export const BridgePuzzleTab: React.FC<{
             })}
 
             {/* Nodes */}
-            {nodes.map((node) => {
+            {scenario.nodes.map((node) => {
               const isInfected = infectedNodes.has(node.id);
+              const isPatientZero = node.id === scenario.patientZero;
               return (
                 <g key={node.id}>
                   <circle
                     cx={node.x}
                     cy={node.y}
-                    r={node.label.includes('허브') ? 16 : 13}
+                    r={isPatientZero ? 18 : 14}
                     fill={
                       isInfected
                         ? '#FF6B5C'
@@ -234,8 +498,8 @@ export const BridgePuzzleTab: React.FC<{
                         ? '#3FA796'
                         : '#4B6B94'
                     }
-                    stroke={isInfected ? '#FFFFFF' : '#EAFBF6'}
-                    strokeWidth={2}
+                    stroke={isPatientZero ? '#FFD166' : isInfected ? '#FFFFFF' : '#EAFBF6'}
+                    strokeWidth={isPatientZero ? 3 : 2}
                     className="transition-colors duration-300"
                   />
                   <text
@@ -249,7 +513,7 @@ export const BridgePuzzleTab: React.FC<{
                   >
                     {node.label.split(' ')[0]}
                   </text>
-                  {node.id === 2 && (
+                  {isPatientZero && (
                     <text
                       x={node.x}
                       y={node.y + 24}
@@ -258,7 +522,7 @@ export const BridgePuzzleTab: React.FC<{
                       fontWeight="bold"
                       textAnchor="middle"
                     >
-                      최초 감염
+                      최초 감염 ({scenario.patientZeroLabel})
                     </text>
                   )}
                 </g>
@@ -274,44 +538,49 @@ export const BridgePuzzleTab: React.FC<{
               방화벽 설치 제어반
             </div>
 
-            <div className="p-3 rounded-lg bg-[#0A1A18] border border-[#234E47] text-xs space-y-2 mb-4">
-              <div className="flex justify-between items-center">
+            {/* Scenario Story Box */}
+            <div className="p-3 rounded-lg bg-[#0A1A18] border border-[#234E47] text-xs space-y-1.5 mb-3">
+              <div className="font-bold text-[#EAFBF6] flex items-center gap-1.5">
+                {renderIcon(scenario.icon)}
+                <span>{scenario.title}</span>
+              </div>
+              <p className="text-[#7DBFB0] leading-relaxed">
+                {scenario.story}
+              </p>
+              <div className="flex justify-between items-center pt-2 border-t border-[#234E47]">
                 <span className="text-[#7DBFB0]">가위(방화벽) 사용:</span>
                 <b className="font-mono text-sm text-[#F2B84B]">
-                  {cutEdges.size} / {maxCuts} 개
+                  {cutEdges.size} / {scenario.maxCuts} 개
                 </b>
-              </div>
-              <div className="text-[11px] text-[#7DBFB0] leading-relaxed">
-                👉 연결선을 클릭하면 가위로 자를 수 있습니다. A학교에서 B학교로 건너가는 <strong>다리(Bridge) 2개</strong>를 정확히 찾아 차단하세요!
               </div>
             </div>
 
             {/* Simulation Feedback */}
             {breached && (
-              <div className="p-3 rounded-lg bg-[#FF6B5C]/20 border border-[#FF6B5C] text-xs text-[#FF6B5C] mb-4 flex items-start gap-2 animate-in fade-in">
+              <div className="p-3 rounded-lg bg-[#FF6B5C]/20 border border-[#FF6B5C] text-xs text-[#FF6B5C] mb-3 flex items-start gap-2 animate-in fade-in">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div>
                   <strong>방화벽 뚫림!</strong>
                   <div className="text-[11px] mt-0.5">
-                    차단되지 않은 다리를 통해 바이러스가 B학교로 확산되었습니다. 다른 연결선을 잘라보세요!
+                    차단되지 않은 다리를 통해 {scenario.groupBName} 구역으로 전파되었습니다. 다른 다리를 잘라보세요!
                   </div>
                 </div>
               </div>
             )}
 
             {stageCleared && (
-              <div className="p-3 rounded-lg bg-[#4ADE80]/20 border border-[#4ADE80] text-xs text-[#4ADE80] mb-4 flex items-start gap-2 animate-in fade-in">
+              <div className="p-3 rounded-lg bg-[#4ADE80]/20 border border-[#4ADE80] text-xs text-[#4ADE80] mb-3 flex items-start gap-2 animate-in fade-in">
                 <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
                 <div>
                   <strong>격리 성공!</strong>
                   <div className="text-[11px] mt-0.5">
-                    핵심 다리를 완벽히 차단하여 B학교의 5명 전원을 감염으로부터 지켜냈습니다! (+50 XP)
+                    핵심 다리를 완벽히 차단하여 {scenario.groupBName}의 전원을 전파로부터 지켜냈습니다! (+50 XP)
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="space-y-2 mb-4">
+            <div className="space-y-2 mb-3">
               <button
                 onClick={runSpread}
                 disabled={simulating}
@@ -330,14 +599,14 @@ export const BridgePuzzleTab: React.FC<{
               </button>
             </div>
 
+            {/* Educational Math Lesson Box */}
             <div className="bg-[#0A1A18] border border-[#234E47] rounded-lg p-3 text-xs leading-relaxed">
               <div className="text-[#F2B84B] font-bold mb-1 flex items-center gap-1.5">
                 <HelpCircle className="w-3.5 h-3.5" />
-                <span>그래프 이론: '약한 유대의 다리'</span>
+                <span>그래프 이론 핵심: '브릿지와 최소 컷'</span>
               </div>
               <p className="text-[#7DBFB0]">
-                우리 사회는 끼리끼리 친한 '클러스터'로 이루어져 있습니다. 소문이나 유행병이 다른 무리로 건너뛰는 것은 친한 친구가 아니라,{' '}
-                <strong className="text-[#EAFBF6]">다른 학교 친구를 잇는 '약한 연결(다리)'</strong> 덕분입니다. 방역에서는 이 다리만 찾아내면 전체를 락다운하지 않고도 확산을 막을 수 있습니다.
+                {scenario.mathLesson}
               </p>
             </div>
           </div>

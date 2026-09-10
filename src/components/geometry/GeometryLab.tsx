@@ -5,7 +5,7 @@ import { FermatTab } from './FermatTab';
 import { TorricelliTab } from './TorricelliTab';
 import { BubbleTab } from './BubbleTab';
 import { CityGameTab } from './CityGameTab';
-import { Home, Compass, ArrowRight } from 'lucide-react';
+import { Home, Compass, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface GeometryLabProps {
   onGoHome: () => void;
@@ -29,8 +29,12 @@ export const GeometryLab: React.FC<GeometryLabProps> = ({
     { key: 'city', label: '도시 설계 & 외판원 게임', number: 6, session: '3차시' },
   ];
 
+  const currentIdx = tabs.findIndex((t) => t.key === activeTab);
+  const prevTab = currentIdx > 0 ? tabs[currentIdx - 1] : null;
+  const nextTab = currentIdx < tabs.length - 1 ? tabs[currentIdx + 1] : null;
+
   return (
-    <div className="min-h-screen bg-[#0E2A45] text-[#EAF3FC] font-sans relative pb-20 selection:bg-[#E7A93D] selection:text-[#0E2A45]">
+    <div className="min-h-screen bg-[#0E2A45] text-[#EAF3FC] font-sans relative pb-20 selection:bg-[#E7A93D] selection:text-[#0E2A45] overflow-x-hidden w-full max-w-full">
       {/* Top Universal Classroom Bar */}
       <nav className="bg-[#153A5C]/95 backdrop-blur border-b border-[#2C567F] sticky top-0 z-40 px-4 py-2.5">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-2 flex-wrap">
@@ -82,8 +86,8 @@ export const GeometryLab: React.FC<GeometryLabProps> = ({
       </header>
 
       {/* Tabs Navigation */}
-      <div className="max-w-6xl mx-auto px-5 mt-4">
-        <nav className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-4">
+        <nav className="flex flex-wrap gap-1.5 pb-1">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.key;
             return (
@@ -115,6 +119,39 @@ export const GeometryLab: React.FC<GeometryLabProps> = ({
           {activeTab === 'torricelli' && <TorricelliTab />}
           {activeTab === 'bubble' && <BubbleTab />}
           {activeTab === 'city' && <CityGameTab />}
+
+          {/* Bottom Step-by-Step Navigation Bar */}
+          <div className="mt-8 pt-4 border-t border-[#2C567F] flex items-center justify-between gap-3 flex-wrap text-xs">
+            {prevTab ? (
+              <button
+                onClick={() => setActiveTab(prevTab.key)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#0E2A45] hover:bg-[#1B4468] border border-[#2C567F] text-[#9FC0DC] hover:text-[#EAF3FC] font-semibold transition-all cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4 text-[#E7A93D]" />
+                <span>이전: {prevTab.number}. {prevTab.label}</span>
+              </button>
+            ) : (
+              <div />
+            )}
+
+            <div className="text-[11px] text-[#9FC0DC] font-mono text-center">
+              현재 <strong className="text-[#E7A93D]">{currentIdx + 1}번 / 총 6개</strong> 탐구 진행 중
+            </div>
+
+            {nextTab ? (
+              <button
+                onClick={() => setActiveTab(nextTab.key)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#E7A93D] hover:bg-[#d4962c] text-[#0E2A45] font-bold transition-all cursor-pointer shadow-md"
+              >
+                <span>다음: {nextTab.number}. {nextTab.label}</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <div className="text-xs font-bold text-[#34D399] flex items-center gap-1">
+                <span>🎉 6개 모든 탐구 완료!</span>
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>

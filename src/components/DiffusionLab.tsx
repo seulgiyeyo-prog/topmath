@@ -11,7 +11,7 @@ import { SirModelTab } from './SirModelTab';
 import { HerdImmunityTab } from './HerdImmunityTab';
 import { FakeNewsGameTab } from './FakeNewsGameTab';
 import { MiddleSchoolExplainModal } from './MiddleSchoolExplainModal';
-import { Check, BookOpen, Home, ArrowRight, Share2 } from 'lucide-react';
+import { Check, BookOpen, Home, ArrowRight, Share2, ChevronLeft, ChevronRight, LayoutGrid, SlidersHorizontal } from 'lucide-react';
 
 interface DiffusionLabProps {
   gameState: GameState;
@@ -34,18 +34,70 @@ export const DiffusionLab: React.FC<DiffusionLabProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<MissionKey>('herd');
   const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
+  const [sessionFilter, setSessionFilter] = useState<'all' | '1' | '2' | '3'>('all');
+  const [isWrapView, setIsWrapView] = useState(true);
 
-  const tabs: { key: MissionKey; label: string; number: number; session: string }[] = [
-    { key: 'net', label: '네트워크 기초', number: 1, session: '1차시' },
-    { key: 'path', label: '최단 경로', number: 2, session: '1차시' },
-    { key: 'bridge', label: '방화벽 브릿지 퍼즐', number: 3, session: '1차시' },
-    { key: 'exp', label: '지수 확산', number: 4, session: '2차시' },
-    { key: 'calc', label: '미분이란?', number: 5, session: '2차시' },
-    { key: 'flatten', label: '방역 사령관 게임', number: 6, session: '2차시' },
-    { key: 'sir', label: 'SIR 모델', number: 7, session: '2차시' },
-    { key: 'herd', label: '집단면역 게임 🎮', number: 8, session: '3차시' },
-    { key: 'fakeNews', label: '가짜 뉴스 방어 🛡️', number: 9, session: '3차시' },
+  const navScrollRef = React.useRef<HTMLDivElement | null>(null);
+
+  const tabs: { key: MissionKey; label: string; number: number; session: string; sessionNum: '1' | '2' | '3' }[] = [
+    { key: 'net', label: '네트워크 기초', number: 1, session: '1차시', sessionNum: '1' },
+    { key: 'path', label: '최단 경로', number: 2, session: '1차시', sessionNum: '1' },
+    { key: 'bridge', label: '방화벽 브릿지 퍼즐', number: 3, session: '1차시', sessionNum: '1' },
+    { key: 'exp', label: '지수 확산', number: 4, session: '2차시', sessionNum: '2' },
+    { key: 'calc', label: '미분이란?', number: 5, session: '2차시', sessionNum: '2' },
+    { key: 'flatten', label: '방역 사령관 게임', number: 6, session: '2차시', sessionNum: '2' },
+    { key: 'sir', label: 'SIR 모델', number: 7, session: '2차시', sessionNum: '2' },
+    { key: 'herd', label: '집단면역 게임 🎮', number: 8, session: '3차시', sessionNum: '3' },
+    { key: 'fakeNews', label: '가짜 뉴스 방어 🛡️', number: 9, session: '3차시', sessionNum: '3' },
   ];
+
+  const visibleTabs = sessionFilter === 'all' 
+    ? tabs 
+    : tabs.filter((t) => t.sessionNum === sessionFilter);
+
+  const currentIdx = tabs.findIndex((t) => t.key === activeTab);
+  const prevTab = currentIdx > 0 ? tabs[currentIdx - 1] : null;
+  const nextTab = currentIdx < tabs.length - 1 ? tabs[currentIdx + 1] : null;
+
+  const handleSelectTab = (key: MissionKey) => {
+    setActiveTab(key);
+    onAddXP(5);
+  };
+
+  const handlePrevTab = () => {
+    if (prevTab) {
+      handleSelectTab(prevTab.key);
+      if (sessionFilter !== 'all' && prevTab.sessionNum !== sessionFilter) {
+        setSessionFilter(prevTab.sessionNum);
+      }
+    }
+  };
+
+  const handleNextTab = () => {
+    if (nextTab) {
+      handleSelectTab(nextTab.key);
+      if (sessionFilter !== 'all' && nextTab.sessionNum !== sessionFilter) {
+        setSessionFilter(nextTab.sessionNum);
+      }
+    }
+  };
+
+  const handleSelectSession = (filter: 'all' | '1' | '2' | '3') => {
+    setSessionFilter(filter);
+    if (filter !== 'all') {
+      const match = tabs.find((t) => t.sessionNum === filter);
+      if (match && !tabs.filter((t) => t.sessionNum === filter).some((t) => t.key === activeTab)) {
+        handleSelectTab(match.key);
+      }
+    }
+  };
+
+  const scrollNav = (direction: 'left' | 'right') => {
+    if (navScrollRef.current) {
+      const offset = direction === 'left' ? -220 : 220;
+      navScrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0A1A18] text-[#EAFBF6] font-sans relative pb-20 selection:bg-[#F2B84B] selection:text-[#0A1A18]">
@@ -86,7 +138,7 @@ export const DiffusionLab: React.FC<DiffusionLabProps> = ({
       <HUD gameState={gameState} />
 
       {/* Hero Header */}
-      <header className="max-w-6xl mx-auto px-5 pt-6 pb-3">
+      <header className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="text-[11px] font-mono text-[#F2B84B] tracking-wider uppercase">
             중등수학 영재교육원 · 감염병·소문 확산과 네트워크 모델링 (총 3차시 마스터)
@@ -111,42 +163,160 @@ export const DiffusionLab: React.FC<DiffusionLabProps> = ({
         </p>
       </header>
 
-      {/* Tabs Navigation */}
-      <div className="max-w-6xl mx-auto px-5 mt-4">
-        <nav className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.key;
-            const isDone = gameState.missions[tab.key];
-            return (
-              <button
-                key={tab.key}
-                onClick={() => {
-                  setActiveTab(tab.key);
-                  onAddXP(5);
-                }}
-                className={`px-3 py-2 rounded-t-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 relative border border-[#234E47] border-b-0 cursor-pointer ${
-                  isActive
-                    ? 'bg-[#F2B84B] text-[#0A1A18] font-bold shadow-sm'
-                    : 'bg-[#132E29] text-[#7DBFB0] hover:text-white hover:bg-[#1A3D37]'
-                }`}
-              >
-                <span className="text-[10px] px-1 py-0.5 rounded bg-black/20 font-mono">
-                  {tab.session}
-                </span>
-                <span>
-                  {tab.number}. {tab.label}
-                </span>
-                {isDone && (
-                  <Check
-                    className={`w-3 h-3 ${
-                      isActive ? 'text-[#0A1A18]' : 'text-[#4ADE80]'
-                    } stroke-[3]`}
-                  />
-                )}
-              </button>
-            );
-          })}
-        </nav>
+      {/* Tabs Navigation Section */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-4">
+        {/* Session Filter Bar + Quick Navigation Controls */}
+        <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#0E2420] border border-[#234E47] p-2 rounded-xl text-xs">
+          {/* Session Quick Filters */}
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-[#7DBFB0] text-[11px] font-bold mr-1 hidden md:inline">차시별 필터:</span>
+            <button
+              onClick={() => handleSelectSession('all')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer text-xs ${
+                sessionFilter === 'all'
+                  ? 'bg-[#F2B84B] text-[#0A1A18] shadow-sm'
+                  : 'bg-[#132E29] text-[#7DBFB0] hover:text-white'
+              }`}
+            >
+              전체 9개 미션
+            </button>
+            <button
+              onClick={() => handleSelectSession('1')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer text-xs ${
+                sessionFilter === '1'
+                  ? 'bg-[#F2B84B] text-[#0A1A18] shadow-sm'
+                  : 'bg-[#132E29] text-[#7DBFB0] hover:text-white'
+              }`}
+            >
+              1차시 (1~3. 네트워크)
+            </button>
+            <button
+              onClick={() => handleSelectSession('2')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer text-xs ${
+                sessionFilter === '2'
+                  ? 'bg-[#F2B84B] text-[#0A1A18] shadow-sm'
+                  : 'bg-[#132E29] text-[#7DBFB0] hover:text-white'
+              }`}
+            >
+              2차시 (4~7. 확산·미분)
+            </button>
+            <button
+              onClick={() => handleSelectSession('3')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer text-xs ${
+                sessionFilter === '3'
+                  ? 'bg-[#F2B84B] text-[#0A1A18] shadow-sm'
+                  : 'bg-[#132E29] text-[#7DBFB0] hover:text-white'
+              }`}
+            >
+              3차시 (8~9. 게임·방어)
+            </button>
+          </div>
+
+          {/* Stepper + View Mode Toggle */}
+          <div className="flex items-center gap-1.5 self-end sm:self-auto">
+            <button
+              onClick={handlePrevTab}
+              disabled={!prevTab}
+              className={`p-1.5 rounded-lg border text-xs flex items-center gap-0.5 transition-all ${
+                prevTab
+                  ? 'bg-[#132E29] border-[#234E47] text-[#EAFBF6] hover:bg-[#1A3D37] cursor-pointer'
+                  : 'bg-[#0A1A18] border-[#1A3D37] text-gray-600 cursor-not-allowed'
+              }`}
+              title="이전 미션"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span className="text-[11px] hidden sm:inline">이전</span>
+            </button>
+
+            <span className="font-mono text-xs px-2 py-1 rounded bg-[#0A1A18] border border-[#234E47] text-[#F2B84B] font-bold">
+              {currentIdx + 1} / {tabs.length}
+            </span>
+
+            <button
+              onClick={handleNextTab}
+              disabled={!nextTab}
+              className={`p-1.5 rounded-lg border text-xs flex items-center gap-0.5 transition-all ${
+                nextTab
+                  ? 'bg-[#132E29] border-[#234E47] text-[#EAFBF6] hover:bg-[#1A3D37] cursor-pointer'
+                  : 'bg-[#0A1A18] border-[#1A3D37] text-gray-600 cursor-not-allowed'
+              }`}
+              title="다음 미션"
+            >
+              <span className="text-[11px] hidden sm:inline">다음</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={() => setIsWrapView((prev) => !prev)}
+              className="p-1.5 rounded-lg bg-[#132E29] hover:bg-[#1A3D37] border border-[#234E47] text-[#7DBFB0] hover:text-white transition-all cursor-pointer ml-1"
+              title={isWrapView ? '한 줄 슬라이드 모드로 전환' : '한눈에 펼쳐보기(랩) 모드로 전환'}
+            >
+              {isWrapView ? <SlidersHorizontal className="w-3.5 h-3.5" /> : <LayoutGrid className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Row Container (Wrap Mode by default to prevent side cutoff) */}
+        <div className="relative">
+          {!isWrapView && (
+            <div className="flex items-center justify-between mb-1 text-[11px] text-[#7DBFB0]">
+              <span>💡 가로 스크롤 또는 좌우 화살표를 눌러 숨겨진 탭을 볼 수 있습니다:</span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => scrollNav('left')}
+                  className="px-2 py-0.5 rounded bg-[#132E29] hover:bg-[#234E47] border border-[#234E47] text-[#F2B84B] cursor-pointer"
+                >
+                  ◀ 좌측 탭
+                </button>
+                <button
+                  onClick={() => scrollNav('right')}
+                  className="px-2 py-0.5 rounded bg-[#132E29] hover:bg-[#234E47] border border-[#234E47] text-[#F2B84B] cursor-pointer"
+                >
+                  우측 탭 ▶
+                </button>
+              </div>
+            </div>
+          )}
+
+          <nav
+            ref={navScrollRef}
+            className={`gap-1.5 pb-1 transition-all ${
+              isWrapView 
+                ? 'flex flex-wrap' 
+                : 'flex overflow-x-auto scrollbar-thin'
+            }`}
+          >
+            {visibleTabs.map((tab) => {
+              const isActive = activeTab === tab.key;
+              const isDone = gameState.missions[tab.key];
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => handleSelectTab(tab.key)}
+                  className={`px-3 py-2 rounded-t-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 relative border border-[#234E47] border-b-0 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#F2B84B] text-[#0A1A18] font-bold shadow-sm'
+                      : 'bg-[#132E29] text-[#7DBFB0] hover:text-white hover:bg-[#1A3D37]'
+                  }`}
+                >
+                  <span className="text-[10px] px-1 py-0.5 rounded bg-black/20 font-mono">
+                    {tab.session}
+                  </span>
+                  <span>
+                    {tab.number}. {tab.label}
+                  </span>
+                  {isDone && (
+                    <Check
+                      className={`w-3 h-3 ${
+                        isActive ? 'text-[#0A1A18]' : 'text-[#4ADE80]'
+                      } stroke-[3]`}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
         {/* Main Panel Content */}
         <main className="bg-[#132E29] border border-[#234E47] rounded-b-2xl rounded-tr-2xl p-4 sm:p-6 shadow-2xl">
@@ -220,6 +390,39 @@ export const DiffusionLab: React.FC<DiffusionLabProps> = ({
               isMissionCompleted={gameState.missions.fakeNews}
             />
           )}
+
+          {/* Bottom Step-by-Step Navigation Bar */}
+          <div className="mt-8 pt-4 border-t border-[#234E47] flex items-center justify-between gap-3 flex-wrap text-xs">
+            {prevTab ? (
+              <button
+                onClick={handlePrevTab}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#0A1A18] hover:bg-[#1A3D37] border border-[#234E47] text-[#7DBFB0] hover:text-[#EAFBF6] font-semibold transition-all cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4 text-[#F2B84B]" />
+                <span>이전: {prevTab.number}. {prevTab.label}</span>
+              </button>
+            ) : (
+              <div />
+            )}
+
+            <div className="text-[11px] text-[#7DBFB0] font-mono text-center">
+              현재 <strong className="text-[#F2B84B]">{currentIdx + 1}번 / 총 9개</strong> 탐구 진행 중
+            </div>
+
+            {nextTab ? (
+              <button
+                onClick={handleNextTab}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#F2B84B] hover:bg-[#d9a038] text-[#0A1A18] font-bold transition-all cursor-pointer shadow-md"
+              >
+                <span>다음: {nextTab.number}. {nextTab.label}</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <div className="text-xs font-bold text-[#4ADE80] flex items-center gap-1">
+                <span>🎉 9개 모든 탐구 완료!</span>
+              </div>
+            )}
+          </div>
         </main>
       </div>
 
