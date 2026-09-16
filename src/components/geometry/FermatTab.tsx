@@ -283,16 +283,39 @@ export const FermatTab: React.FC = () => {
         <div className="lg:col-span-2 bg-[#0E2A45] border border-[#2C567F] rounded-xl p-2 relative overflow-hidden shadow-inner flex flex-col justify-between">
           
           {/* Floating Zoom & View Controls Overlay */}
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-[#0B2138]/90 backdrop-blur-sm border border-[#2C567F] p-1.5 rounded-lg shadow-lg">
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-[#0B2138]/90 backdrop-blur-sm border border-[#2C567F] p-1.5 rounded-lg shadow-lg flex-wrap">
             <button
-              onClick={() => handleZoom(1.2)}
+              onClick={() => handleZoom(1.15)}
               title="확대 (Zoom In)"
               className="p-1.5 rounded hover:bg-[#1B4468] text-[#EAF3FC] hover:text-[#E7A93D] transition-colors cursor-pointer"
             >
               <ZoomIn className="w-4 h-4" />
             </button>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#153A5C]/60 rounded border border-[#2C567F]/70">
+              <input
+                type="range"
+                min="0.4"
+                max="2.2"
+                step="0.05"
+                value={zoom}
+                onChange={(e) => {
+                  const nextZoom = parseFloat(e.target.value);
+                  const centerX = 320;
+                  const centerY = 280;
+                  setPan((prevPan) => ({
+                    x: centerX - (centerX - prevPan.x) * (nextZoom / (zoom || 1)),
+                    y: centerY - (centerY - prevPan.y) * (nextZoom / (zoom || 1)),
+                  }));
+                  setZoom(nextZoom);
+                }}
+                className="w-16 sm:w-24 accent-[#E7A93D] cursor-pointer"
+              />
+              <span className="font-mono text-[#E7A93D] font-bold text-xs w-10 text-center">
+                {Math.round(zoom * 100)}%
+              </span>
+            </div>
             <button
-              onClick={() => handleZoom(0.83)}
+              onClick={() => handleZoom(0.87)}
               title="축소 (Zoom Out)"
               className="p-1.5 rounded hover:bg-[#1B4468] text-[#EAF3FC] hover:text-[#E7A93D] transition-colors cursor-pointer"
             >
@@ -302,7 +325,7 @@ export const FermatTab: React.FC = () => {
             <button
               onClick={handleFitToScreen}
               title="화면에 맞추기 (Auto-Fit)"
-              className="flex items-center gap-1 px-2 py-1 rounded hover:bg-[#1B4468] text-[#6FCF97] text-xs font-semibold transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1 rounded bg-[#6FCF97]/15 hover:bg-[#6FCF97]/25 text-[#6FCF97] border border-[#6FCF97]/40 text-xs font-semibold transition-colors cursor-pointer"
             >
               <Maximize2 className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">화면 맞춤</span>
@@ -313,7 +336,7 @@ export const FermatTab: React.FC = () => {
               className="flex items-center gap-1 px-2 py-1 rounded hover:bg-[#1B4468] text-[#9FC0DC] text-xs font-semibold transition-colors cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>{Math.round(zoom * 100)}%</span>
+              <span className="hidden sm:inline">리셋</span>
             </button>
           </div>
 

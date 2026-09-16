@@ -20,7 +20,11 @@ import {
   EyeOff,
   CheckCircle2,
   ArrowRight,
-  Hand
+  Hand,
+  Maximize2,
+  Move,
+  Sparkles,
+  Layers
 } from 'lucide-react';
 
 interface WorkbookPageProps {
@@ -174,24 +178,61 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
   // 2. FERMAT CANVAS STATE
   // =========================================================================
   const fermatCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [fermatHeight, setFermatHeight] = useState(380);
-  const [fermatZoom, setFermatZoom] = useState(0.75);
+  const [fermatHeight, setFermatHeight] = useState(420);
+  const [fermatZoom, setFermatZoom] = useState(1.0);
+  const [fermatPan, setFermatPan] = useState({ x: 0, y: 0 });
+  const [showFermatConstruction, setShowFermatConstruction] = useState(true);
   const [fermatMaxAngle, setFermatMaxAngle] = useState<number>(60);
 
   const defaultFermatPoints = [
-    { rx: 0.0, ry: -0.38, name: 'A' },
-    { rx: -0.32, ry: 0.32, name: 'B' },
-    { rx: 0.32, ry: 0.32, name: 'C' }
+    { rx: 0.0, ry: -0.28, name: 'A' },
+    { rx: -0.26, ry: 0.22, name: 'B' },
+    { rx: 0.26, ry: 0.22, name: 'C' }
   ];
   const [fPoints, setFPoints] = useState(defaultFermatPoints);
   const dragFermatIdxRef = useRef(-1);
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ x: 0, y: 0, initialPanX: 0, initialPanY: 0 });
 
   const resetFermatPositions = () => {
     setFPoints([
-      { rx: 0.0, ry: -0.38, name: 'A' },
-      { rx: -0.32, ry: 0.32, name: 'B' },
-      { rx: 0.32, ry: 0.32, name: 'C' }
+      { rx: 0.0, ry: -0.28, name: 'A' },
+      { rx: -0.26, ry: 0.22, name: 'B' },
+      { rx: 0.26, ry: 0.22, name: 'C' }
     ]);
+    setFermatPan({ x: 0, y: 0 });
+    setFermatZoom(1.0);
+  };
+
+  const applyFermatPreset = (type: 'acute' | 'equilateral' | 'right' | 'obtuse') => {
+    if (type === 'acute') {
+      setFPoints([
+        { rx: 0.0, ry: -0.28, name: 'A' },
+        { rx: -0.26, ry: 0.22, name: 'B' },
+        { rx: 0.26, ry: 0.22, name: 'C' }
+      ]);
+    } else if (type === 'equilateral') {
+      const r = 0.28;
+      setFPoints([
+        { rx: 0.0, ry: -r, name: 'A' },
+        { rx: -r * Math.cos(Math.PI / 6), ry: r * Math.sin(Math.PI / 6), name: 'B' },
+        { rx: r * Math.cos(Math.PI / 6), ry: r * Math.sin(Math.PI / 6), name: 'C' }
+      ]);
+    } else if (type === 'right') {
+      setFPoints([
+        { rx: -0.22, ry: -0.24, name: 'A' },
+        { rx: -0.22, ry: 0.22, name: 'B' },
+        { rx: 0.28, ry: 0.22, name: 'C' }
+      ]);
+    } else if (type === 'obtuse') {
+      setFPoints([
+        { rx: 0.0, ry: 0.10, name: 'A' },
+        { rx: -0.32, ry: -0.16, name: 'B' },
+        { rx: 0.32, ry: -0.16, name: 'C' }
+      ]);
+    }
+    setFermatPan({ x: 0, y: 0 });
+    setFermatZoom(1.0);
   };
 
   const getAngleDeg = (p1: { x: number; y: number }, p2: { x: number; y: number }, p3: { x: number; y: number }) => {
@@ -202,14 +243,26 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
     return Math.acos(Math.max(-1, Math.min(1, cosV))) * (180 / Math.PI);
   };
 
-  const getExtEquilateral = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const ang = -Math.PI / 3;
+  const rotatePt = (pt: { x: number; y: number }, center: { x: number; y: number }, deg: number) => {
+    const rad = (deg * Math.PI) / 180;
+    const dx = pt.x - center.x;
+    const dy = pt.y - center.y;
     return {
-      x: p1.x + (dx * Math.cos(ang) - dy * Math.sin(ang)),
-      y: p1.y + (dx * Math.sin(ang) + dy * Math.cos(ang))
+      x: center.x + dx * Math.cos(rad) - dy * Math.sin(rad),
+      y: center.y + dx * Math.sin(rad) + dy * Math.cos(rad)
     };
+  };
+
+  const getExtEquilateralApex = (
+    p1: { x: number; y: number },
+    p2: { x: number; y: number },
+    oppositeP3: { x: number; y: number }
+  ) => {
+    const cand1 = rotatePt(p2, p1, 60);
+    const cand2 = rotatePt(p2, p1, -60);
+    const d1 = Math.hypot(cand1.x - oppositeP3.x, cand1.y - oppositeP3.y);
+    const d2 = Math.hypot(cand2.x - oppositeP3.x, cand2.y - oppositeP3.y);
+    return d1 > d2 ? cand1 : cand2;
   };
 
   const getLineIntersect = (
@@ -223,6 +276,54 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
     const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / denom;
     return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
   };
+
+  // 화면 자동 맞춤 (Auto-Fit): 어떤 배율이나 위치에서도 전체 작도 요소가 한눈에 들어오도록 뷰 조정
+  const handleFermatFit = useCallback(() => {
+    const canvas = fermatCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || 500;
+    const height = rect.height || 420;
+    const baseDim = Math.min(width, height);
+    const baseScale = baseDim * 0.72;
+
+    const wPts = fPoints.map((p) => ({
+      x: p.rx * baseScale,
+      y: p.ry * baseScale,
+    }));
+    const [wA, wB, wC] = wPts;
+    const wExtBC = getExtEquilateralApex(wB, wC, wA);
+    const wExtCA = getExtEquilateralApex(wC, wA, wB);
+    const wExtAB = getExtEquilateralApex(wA, wB, wC);
+
+    const allPts = showFermatConstruction
+      ? [wA, wB, wC, wExtBC, wExtCA, wExtAB]
+      : [wA, wB, wC];
+
+    const minX = Math.min(...allPts.map((p) => p.x));
+    const maxX = Math.max(...allPts.map((p) => p.x));
+    const minY = Math.min(...allPts.map((p) => p.y));
+    const maxY = Math.max(...allPts.map((p) => p.y));
+
+    const bboxW = Math.max(1, maxX - minX);
+    const bboxH = Math.max(1, maxY - minY);
+    const bboxCenterX = (minX + maxX) / 2;
+    const bboxCenterY = (minY + maxY) / 2;
+
+    const padding = 50;
+    const availW = Math.max(100, width - padding * 2);
+    const availH = Math.max(100, height - padding * 2);
+
+    const scaleX = availW / bboxW;
+    const scaleY = availH / bboxH;
+    const fitZoom = Math.min(1.8, Math.max(0.45, Math.min(scaleX, scaleY)));
+
+    const newPanX = -bboxCenterX * fitZoom;
+    const newPanY = -bboxCenterY * fitZoom;
+
+    setFermatZoom(Number(fitZoom.toFixed(2)));
+    setFermatPan({ x: Math.round(newPanX), y: Math.round(newPanY) });
+  }, [fPoints, showFermatConstruction]);
 
   const drawFermat = useCallback(() => {
     const canvas = fermatCanvasRef.current;
@@ -241,13 +342,47 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
     const height = rect.height;
     ctx.clearRect(0, 0, width, height);
 
-    const cx = width / 2;
-    const cy = height / 2;
-    const baseDim = Math.min(width, height);
+    // Canvas Background with delicate blueprint grid
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
 
+    const cx = width / 2 + fermatPan.x;
+    const cy = height / 2 + fermatPan.y;
+    const baseDim = Math.min(width, height);
+    const baseScale = baseDim * 0.72 * fermatZoom;
+
+    // Subtle drafting grid
+    const gridSize = 30;
+    const startX = ((cx % gridSize) + gridSize) % gridSize;
+    const startY = ((cy % gridSize) + gridSize) % gridSize;
+    ctx.strokeStyle = '#f8fafc';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = startX; x < width; x += gridSize) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+    }
+    for (let y = startY; y < height; y += gridSize) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+    }
+    ctx.stroke();
+
+    // Center axes
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, height);
+    ctx.moveTo(0, cy);
+    ctx.lineTo(width, cy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Transform points to screen coordinates
     const pts = fPoints.map((p) => ({
-      x: cx + p.rx * baseDim * fermatZoom,
-      y: cy + p.ry * baseDim * fermatZoom,
+      x: cx + p.rx * baseScale,
+      y: cy + p.ry * baseScale,
       name: p.name,
     }));
     const [A, B, C] = pts;
@@ -258,59 +393,132 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
     const maxAng = Math.max(angA, angB, angC);
     setFermatMaxAngle(maxAng);
 
-    // External equilateral triangles construction lines
-    const extBC = getExtEquilateral(B, C);
-    const extCA = getExtEquilateral(C, A);
-    const extAB = getExtEquilateral(A, B);
+    // External equilateral triangles outward apexes
+    const extBC = getExtEquilateralApex(B, C, A);
+    const extCA = getExtEquilateralApex(C, A, B);
+    const extAB = getExtEquilateralApex(A, B, C);
 
-    ctx.strokeStyle = '#cbd5e1';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([2, 3]);
-    [[B, extBC, C], [C, extCA, A], [A, extAB, B]].forEach(([p1, p2, p3]) => {
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.lineTo(p3.x, p3.y);
-      ctx.stroke();
-    });
-    ctx.setLineDash([]);
+    // Draw External equilateral triangles & Torricelli rays
+    if (showFermatConstruction) {
+      const extTriangles = [
+        { p1: B, p2: extBC, p3: C, name: "A'" },
+        { p1: C, p2: extCA, p3: A, name: "B'" },
+        { p1: A, p2: extAB, p3: B, name: "C'" }
+      ];
+
+      extTriangles.forEach(({ p1, p2, p3, name }) => {
+        // Soft green tint
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.08)';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineTo(p3.x, p3.y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Dashed stroke
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+
+        // Apex point
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.arc(p2.x, p2.y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Apex label
+        ctx.fillStyle = '#047857';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(name, p2.x + 6, p2.y - 4);
+      });
+
+      // Torricelli rays: A -> extBC, B -> extCA, C -> extAB
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      const rays = [
+        [A, extBC],
+        [B, extCA],
+        [C, extAB],
+      ];
+      rays.forEach(([from, to]) => {
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+    }
 
     // Triangle ABC body
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 2.6;
     ctx.beginPath();
     ctx.moveTo(A.x, A.y);
     ctx.lineTo(B.x, B.y);
     ctx.lineTo(C.x, C.y);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(241, 245, 249, 0.7)';
+    ctx.fillStyle = 'rgba(37, 99, 235, 0.07)';
     ctx.fill();
     ctx.stroke();
 
     // Determine Fermat point
     let fermatP: { x: number; y: number } | null = null;
-    if (angA >= 120) fermatP = A;
-    else if (angB >= 120) fermatP = B;
-    else if (angC >= 120) fermatP = C;
-    else {
+    let isObtuse = false;
+    if (angA >= 120) {
+      fermatP = A;
+      isObtuse = true;
+    } else if (angB >= 120) {
+      fermatP = B;
+      isObtuse = true;
+    } else if (angC >= 120) {
+      fermatP = C;
+      isObtuse = true;
+    } else {
       fermatP = getLineIntersect(A, extBC, B, extCA) || {
         x: (A.x + B.x + C.x) / 3,
         y: (A.y + B.y + C.y) / 3,
       };
     }
 
-    // Connect Fermat point
+    // Connect Fermat point roads (PA, PB, PC)
     if (fermatP) {
+      const distPA = Math.hypot(fermatP.x - A.x, fermatP.y - A.y);
+      const distPB = Math.hypot(fermatP.x - B.x, fermatP.y - B.y);
+      const distPC = Math.hypot(fermatP.x - C.x, fermatP.y - C.y);
+
       ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 2.4;
       [A, B, C].forEach((pt) => {
         ctx.beginPath();
         ctx.moveTo(fermatP!.x, fermatP!.y);
         ctx.lineTo(pt.x, pt.y);
         ctx.stroke();
       });
-      ctx.setLineDash([]);
+
+      // Show distance tags along roads
+      if (!isObtuse) {
+        ctx.fillStyle = '#b91c1c';
+        ctx.font = 'bold 10px monospace';
+        const midAP = { x: (fermatP.x + A.x) / 2, y: (fermatP.y + A.y) / 2 };
+        const midBP = { x: (fermatP.x + B.x) / 2, y: (fermatP.y + B.y) / 2 };
+        const midCP = { x: (fermatP.x + C.x) / 2, y: (fermatP.y + C.y) / 2 };
+        ctx.fillText(`${distPA.toFixed(0)}`, midAP.x + 4, midAP.y - 4);
+        ctx.fillText(`${distPB.toFixed(0)}`, midBP.x + 4, midBP.y - 4);
+        ctx.fillText(`${distPC.toFixed(0)}`, midCP.x + 4, midCP.y - 4);
+      }
+
+      // Fermat point circle
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+      ctx.beginPath();
+      ctx.arc(fermatP.x, fermatP.y, 14, 0, Math.PI * 2);
+      ctx.fill();
 
       ctx.fillStyle = '#dc2626';
       ctx.beginPath();
@@ -322,14 +530,15 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
 
       ctx.fillStyle = '#991b1b';
       ctx.font = 'bold 12px sans-serif';
-      ctx.fillText('P (페르마 점)', fermatP.x + 9, fermatP.y - 7);
+      const labelP = isObtuse ? 'P (둔각 꼭짓점 = 페르마 점)' : 'P (페르마 점: 120° 균형)';
+      ctx.fillText(labelP, fermatP.x + 10, fermatP.y - 8);
     }
 
     // Draw vertices A, B, C
     pts.forEach((p) => {
-      ctx.fillStyle = '#1e293b';
+      ctx.fillStyle = '#1e3a8a';
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 8.5, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 9, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
@@ -340,7 +549,7 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
       ctx.font = 'bold 13px sans-serif';
       ctx.fillText(p.name, p.x - 14, p.y - 12);
     });
-  }, [fPoints, fermatZoom]);
+  }, [fPoints, fermatZoom, fermatPan, showFermatConstruction]);
 
   // =========================================================================
   // 3. GRAPH CANVAS STATE (4-node adjacency matrix)
@@ -706,6 +915,11 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [drawHeron, drawFermat, drawNetGraph, drawR0Chart, drawSirChart]);
 
+  // Redraw Fermat when height changes
+  useEffect(() => {
+    drawFermat();
+  }, [fermatHeight, drawFermat]);
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col selection:bg-blue-600 selection:text-white">
       {/* Top Universal Classroom Header */}
@@ -952,92 +1166,275 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
               </p>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-7 bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col">
-                  <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-200 mb-2 text-xs flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <ZoomIn className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="font-medium text-slate-700">도형 배율:</span>
-                      <input
-                        type="range"
-                        min="0.35"
-                        max="1.3"
-                        step="0.05"
-                        value={fermatZoom}
-                        onChange={(e) => setFermatZoom(parseFloat(e.target.value))}
-                        className="w-24 sm:w-36 accent-blue-600 cursor-pointer"
-                      />
-                      <span className="font-mono text-blue-600 font-bold w-10">
-                        {Math.round(fermatZoom * 100)}%
-                      </span>
+                <div className="lg:col-span-7 bg-slate-50 rounded-xl p-3 sm:p-4 border border-slate-200 flex flex-col space-y-3">
+                  {/* Top Controls Toolbar */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs space-y-2.5 text-xs">
+                    {/* Row 1: Zoom Slider & View Tools */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <ZoomIn className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="font-semibold text-slate-700">도형 배율:</span>
+                        <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
+                          <button
+                            onClick={() => setFermatZoom((z) => Math.max(0.4, Number((z - 0.1).toFixed(2))))}
+                            title="축소"
+                            className="w-5 h-5 flex items-center justify-center rounded hover:bg-slate-200 text-slate-700 font-bold transition cursor-pointer"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="range"
+                            min="0.4"
+                            max="2.2"
+                            step="0.05"
+                            value={fermatZoom}
+                            onChange={(e) => setFermatZoom(parseFloat(e.target.value))}
+                            className="w-20 sm:w-28 accent-blue-600 cursor-pointer"
+                          />
+                          <button
+                            onClick={() => setFermatZoom((z) => Math.min(2.2, Number((z + 0.1).toFixed(2))))}
+                            title="확대"
+                            className="w-5 h-5 flex items-center justify-center rounded hover:bg-slate-200 text-slate-700 font-bold transition cursor-pointer"
+                          >
+                            +
+                          </button>
+                          <span className="font-mono text-blue-600 font-bold w-12 text-center text-[11px]">
+                            {Math.round(fermatZoom * 100)}%
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Auto-Fit Button to prevent clipping */}
+                        <button
+                          onClick={handleFermatFit}
+                          title="작도 도형 전체가 화면에 꽉 차도록 배율과 위치를 최적화합니다"
+                          className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-semibold rounded-lg transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                        >
+                          <Maximize2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>화면 맞춤</span>
+                        </button>
+
+                        {/* Reset Zoom & Pan */}
+                        <button
+                          onClick={() => {
+                            setFermatZoom(1.0);
+                            setFermatPan({ x: 0, y: 0 });
+                          }}
+                          title="기본 배율 100%와 중앙 정렬로 복귀"
+                          className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition cursor-pointer flex items-center gap-1"
+                        >
+                          <span>100%</span>
+                        </button>
+
+                        {/* Toggle Construction Lines */}
+                        <button
+                          onClick={() => setShowFermatConstruction(!showFermatConstruction)}
+                          title="외접 정삼각형 작도선 표시/숨김"
+                          className={`px-2.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1 border ${
+                            showFermatConstruction
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-slate-100 text-slate-500 border-slate-200'
+                          }`}
+                        >
+                          {showFermatConstruction ? <Eye className="w-3.5 h-3.5 text-blue-600" /> : <EyeOff className="w-3.5 h-3.5" />}
+                          <span className="hidden sm:inline">외접 정삼각형</span>
+                        </button>
+
+                        {/* Reset Positions */}
+                        <button
+                          onClick={resetFermatPositions}
+                          title="삼각형 꼭짓점 위치 초기화"
+                          className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-medium transition cursor-pointer flex items-center gap-1"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span>위치 리셋</span>
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={resetFermatPositions}
-                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 font-medium transition cursor-pointer flex items-center gap-1"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      <span>위치 초기화</span>
-                    </button>
+
+                    {/* Row 2: Shape Presets & Canvas Height */}
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-slate-500 font-medium mr-1">모양 프리셋:</span>
+                        <button
+                          onClick={() => applyFermatPreset('acute')}
+                          className="px-2 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 rounded-md text-slate-700 font-medium transition cursor-pointer text-[11px]"
+                        >
+                          📐 예각 (기본)
+                        </button>
+                        <button
+                          onClick={() => applyFermatPreset('equilateral')}
+                          className="px-2 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 rounded-md text-slate-700 font-medium transition cursor-pointer text-[11px]"
+                        >
+                          🔺 정삼각형
+                        </button>
+                        <button
+                          onClick={() => applyFermatPreset('right')}
+                          className="px-2 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 rounded-md text-slate-700 font-medium transition cursor-pointer text-[11px]"
+                        >
+                          📐 직각 (3:4:5)
+                        </button>
+                        <button
+                          onClick={() => applyFermatPreset('obtuse')}
+                          className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md font-medium transition cursor-pointer text-[11px]"
+                        >
+                          ⚠️ 둔각 (≥120°)
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1 text-[11px]">
+                        <span className="text-slate-400">높이:</span>
+                        {[380, 460, 560].map((h) => (
+                          <button
+                            key={h}
+                            onClick={() => setFermatHeight(h)}
+                            className={`px-1.5 py-0.5 rounded transition cursor-pointer ${
+                              fermatHeight === h
+                                ? 'bg-blue-600 text-white font-bold'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {h}px
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* 가변 높이 캔버스 컨테이너 */}
+                  {/* Interactive Canvas Container with Smooth Pan, Drag, and Wheel */}
                   <div
-                    className="w-full bg-white rounded-lg overflow-hidden border border-slate-200 relative transition-all duration-200 touch-none cursor-grab"
+                    className="w-full bg-white rounded-xl overflow-hidden border border-slate-200 relative transition-all duration-150 touch-none shadow-inner"
                     style={{ height: `${fermatHeight}px` }}
+                    onWheel={(e) => {
+                      e.preventDefault();
+                      const delta = e.deltaY < 0 ? 1.08 : 0.92;
+                      setFermatZoom((prev) => Math.min(2.2, Math.max(0.4, Number((prev * delta).toFixed(2)))));
+                    }}
                     onPointerDown={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const x = e.clientX - rect.left;
                       const y = e.clientY - rect.top;
-                      const cx = rect.width / 2;
-                      const cy = rect.height / 2;
+                      const cx = rect.width / 2 + fermatPan.x;
+                      const cy = rect.height / 2 + fermatPan.y;
                       const baseDim = Math.min(rect.width, rect.height);
+                      const baseScale = baseDim * 0.72 * fermatZoom;
 
+                      let hit = -1;
                       fPoints.forEach((p, idx) => {
-                        const px = cx + p.rx * baseDim * fermatZoom;
-                        const py = cy + p.ry * baseDim * fermatZoom;
-                        if (Math.hypot(px - x, py - y) < 30) {
-                          dragFermatIdxRef.current = idx;
+                        const px = cx + p.rx * baseScale;
+                        const py = cy + p.ry * baseScale;
+                        if (Math.hypot(px - x, py - y) < 28) {
+                          hit = idx;
                         }
                       });
+
+                      if (hit !== -1) {
+                        dragFermatIdxRef.current = hit;
+                      } else {
+                        isPanningRef.current = true;
+                        panStartRef.current = {
+                          x: e.clientX,
+                          y: e.clientY,
+                          initialPanX: fermatPan.x,
+                          initialPanY: fermatPan.y,
+                        };
+                      }
+                      try {
+                        (e.target as Element).setPointerCapture(e.pointerId);
+                      } catch {
+                        // ignore
+                      }
                     }}
                     onPointerMove={(e) => {
-                      if (dragFermatIdxRef.current === -1) return;
                       const rect = e.currentTarget.getBoundingClientRect();
-                      const cx = rect.width / 2;
-                      const cy = rect.height / 2;
+                      const cx = rect.width / 2 + fermatPan.x;
+                      const cy = rect.height / 2 + fermatPan.y;
                       const baseDim = Math.min(rect.width, rect.height);
+                      const baseScale = baseDim * 0.72 * fermatZoom;
 
-                      const x = e.clientX - rect.left;
-                      const y = e.clientY - rect.top;
+                      if (dragFermatIdxRef.current !== -1) {
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
 
-                      const nextPts = [...fPoints];
-                      nextPts[dragFermatIdxRef.current] = {
-                        ...nextPts[dragFermatIdxRef.current],
-                        rx: (x - cx) / (baseDim * fermatZoom),
-                        ry: (y - cy) / (baseDim * fermatZoom),
-                      };
-                      setFPoints(nextPts);
+                        const nextPts = [...fPoints];
+                        nextPts[dragFermatIdxRef.current] = {
+                          ...nextPts[dragFermatIdxRef.current],
+                          rx: (x - cx) / baseScale,
+                          ry: (y - cy) / baseScale,
+                        };
+                        setFPoints(nextPts);
+                      } else if (isPanningRef.current) {
+                        const dx = e.clientX - panStartRef.current.x;
+                        const dy = e.clientY - panStartRef.current.y;
+                        setFermatPan({
+                          x: panStartRef.current.initialPanX + dx,
+                          y: panStartRef.current.initialPanY + dy,
+                        });
+                      }
                     }}
-                    onPointerUp={() => {
+                    onPointerUp={(e) => {
                       dragFermatIdxRef.current = -1;
+                      isPanningRef.current = false;
+                      try {
+                        (e.target as Element).releasePointerCapture(e.pointerId);
+                      } catch {
+                        // ignore
+                      }
                     }}
                   >
-                    <canvas ref={fermatCanvasRef} className="w-full h-full block" />
+                    <canvas ref={fermatCanvasRef} className="w-full h-full block cursor-crosshair" />
+
+                    {/* Guide Overlay Pill */}
+                    <div className="absolute bottom-2.5 left-2.5 pointer-events-none bg-white/90 backdrop-blur-xs border border-slate-200/80 px-2.5 py-1 rounded-md text-[11px] text-slate-500 shadow-xs flex items-center gap-1.5">
+                      <Move className="w-3 h-3 text-blue-600" />
+                      <span>빈 공간 드래그: <strong>화면 이동(Pan)</strong> | 마우스 휠: <strong>확대/축소</strong></span>
+                    </div>
+
+                    {/* Auto-Fit shortcut button in corner */}
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                      <span className="bg-white/90 backdrop-blur-xs border border-slate-200 px-2 py-0.5 rounded text-[11px] font-mono font-bold text-blue-700 shadow-xs">
+                        {Math.round(fermatZoom * 100)}%
+                      </span>
+                      <button
+                        onClick={handleFermatFit}
+                        title="화면에 꼭 맞추기"
+                        className="bg-white/90 hover:bg-white border border-slate-200 p-1 rounded-md text-emerald-700 shadow-xs transition cursor-pointer"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap justify-between items-center text-xs gap-2">
+                  {/* Status Bar & Visual Legend */}
+                  <div className="flex flex-wrap justify-between items-center text-xs gap-2 pt-1">
                     <span
-                      className={`px-2.5 py-1 rounded font-semibold ${
+                      className={`px-2.5 py-1 rounded-lg font-semibold border ${
                         fermatMaxAngle >= 120
-                          ? 'bg-rose-100 text-rose-800 font-bold'
-                          : 'bg-emerald-100 text-emerald-800 font-bold'
+                          ? 'bg-rose-50 text-rose-800 border-rose-200 font-bold'
+                          : 'bg-emerald-50 text-emerald-800 border-emerald-200 font-bold'
                       }`}
                     >
-                      최대 내각: {fermatMaxAngle.toFixed(1)}° {fermatMaxAngle >= 120 ? '(≥ 120°: 꼭짓점이 페르마 점!)' : '(< 120°: 내부 120° 점 형성)'}
+                      최대 내각: {fermatMaxAngle.toFixed(1)}°{' '}
+                      {fermatMaxAngle >= 120
+                        ? '(≥ 120°: 둔각 꼭짓점 자체가 최단 페르마 점!)'
+                        : '(< 120°: 내부 120° 균형점 형성)'}
                     </span>
-                    <span className="text-slate-500">
-                      <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full mr-1"></span>
-                      빨간 점 = 페르마 점 <MathView tex="P" />
-                    </span>
+
+                    <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full"></span>
+                        <span className="font-semibold text-slate-700">페르마 점 P</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="inline-block w-2.5 h-1 bg-emerald-500 rounded-xs"></span>
+                        <span>외접 정삼각형</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="inline-block w-2.5 h-1 bg-amber-500 rounded-xs"></span>
+                        <span>토리첼리 교선</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
 
