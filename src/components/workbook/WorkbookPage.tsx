@@ -1,5 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { MathView } from '../MathView';
+import { SoapFilmLab } from './SoapFilmLab';
+import { AdjacencyMatrixVisualizer } from './AdjacencyMatrixVisualizer';
+import { FlattenCurveVisualizer } from './FlattenCurveVisualizer';
 import {
   GraduationCap,
   Shapes,
@@ -24,7 +27,8 @@ import {
   Maximize2,
   Move,
   Sparkles,
-  Layers
+  Layers,
+  Droplets,
 } from 'lucide-react';
 
 interface WorkbookPageProps {
@@ -244,6 +248,54 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
     const cosV = (a * a + b * b - c * c) / (2 * a * b);
     return Math.acos(Math.max(-1, Math.min(1, cosV))) * (180 / Math.PI);
   };
+
+  const handleFermatAngleDrag = (targetDeg: number) => {
+    const pA = fPoints[0];
+    const pB = fPoints[1];
+    const pC = fPoints[2];
+    const baseLen = Math.hypot(pC.rx - pB.rx, pC.ry - pB.ry) || 0.52;
+    const midRx = (pB.rx + pC.rx) / 2;
+    const midRy = (pB.ry + pC.ry) / 2;
+    const baseAngle = Math.atan2(pC.ry - pB.ry, pC.rx - pB.rx);
+    const normAngle = baseAngle - Math.PI / 2;
+    const halfRad = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, (targetDeg * Math.PI) / 360));
+    const h = (baseLen / 2) / Math.tan(halfRad);
+    const nextRx = midRx + h * Math.cos(normAngle);
+    const nextRy = midRy + h * Math.sin(normAngle);
+
+    setFPoints([
+      { ...pA, rx: Number(nextRx.toFixed(4)), ry: Number(nextRy.toFixed(4)) },
+      pB,
+      pC
+    ]);
+  };
+
+  const currentFermatAngA = useMemo(() => {
+    if (fPoints.length < 3) return 60;
+    return getAngleDeg(
+      { x: fPoints[1].rx, y: fPoints[1].ry },
+      { x: fPoints[0].rx, y: fPoints[0].ry },
+      { x: fPoints[2].rx, y: fPoints[2].ry }
+    );
+  }, [fPoints]);
+
+  const currentFermatAngB = useMemo(() => {
+    if (fPoints.length < 3) return 60;
+    return getAngleDeg(
+      { x: fPoints[0].rx, y: fPoints[0].ry },
+      { x: fPoints[1].rx, y: fPoints[1].ry },
+      { x: fPoints[2].rx, y: fPoints[2].ry }
+    );
+  }, [fPoints]);
+
+  const currentFermatAngC = useMemo(() => {
+    if (fPoints.length < 3) return 60;
+    return getAngleDeg(
+      { x: fPoints[0].rx, y: fPoints[0].ry },
+      { x: fPoints[2].rx, y: fPoints[2].ry },
+      { x: fPoints[1].rx, y: fPoints[1].ry }
+    );
+  }, [fPoints]);
 
   const rotatePt = (pt: { x: number; y: number }, center: { x: number; y: number }, deg: number) => {
     const rad = (deg * Math.PI) / 180;
@@ -470,6 +522,87 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
     ctx.fill();
     ctx.stroke();
 
+    // Draw real-time angle sectors and labels at vertices A, B, C
+    const drawAngleIndicator = (
+      vertex: { x: number; y: number },
+      p1: { x: number; y: number },
+      p2: { x: number; y: number },
+      deg: number,
+      name: string
+    ) => {
+      const r = 24;
+      const ang1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
+      const ang2 = Math.atan2(p2.y - vertex.y, p2.x - vertex.x);
+
+      let diff = ang2 - ang1;
+      while (diff < 0) diff += 2 * Math.PI;
+      while (diff >= 2 * Math.PI) diff -= 2 * Math.PI;
+
+      let startAng = ang1;
+      let sweep = diff;
+      if (diff > Math.PI) {
+        startAng = ang2;
+        sweep = 2 * Math.PI - diff;
+      }
+      const endAng = startAng + sweep;
+      const isObt = deg >= 120;
+
+      // Fill & stroke angle sector
+      ctx.beginPath();
+      ctx.moveTo(vertex.x, vertex.y);
+      ctx.arc(vertex.x, vertex.y, r, startAng, endAng, false);
+      ctx.closePath();
+      ctx.fillStyle = isObt ? 'rgba(239, 68, 68, 0.28)' : 'rgba(245, 158, 11, 0.22)';
+      ctx.fill();
+      ctx.strokeStyle = isObt ? '#ef4444' : '#f59e0b';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      // Degree label position
+      const midAng = startAng + sweep / 2;
+      const labelDist = r + 20;
+      const lx = vertex.x + labelDist * Math.cos(midAng);
+      const ly = vertex.y + labelDist * Math.sin(midAng);
+
+      const text = `∠${name}: ${Math.round(deg)}°${isObt ? ' ⚠️' : ''}`;
+      ctx.font = 'bold 10.5px monospace';
+      const tw = ctx.measureText(text).width;
+      ctx.fillStyle = isObt ? '#881337' : '#0f172a';
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(lx - (tw + 10) / 2, ly - 9, tw + 10, 18, 4);
+      } else {
+        ctx.rect(lx - (tw + 10) / 2, ly - 9, tw + 10, 18);
+      }
+      ctx.fill();
+      ctx.strokeStyle = isObt ? '#f43f5e' : '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = isObt ? '#fecdd3' : '#fef08a';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, lx, ly);
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+    };
+
+    drawAngleIndicator(A, B, C, angA, 'A');
+    drawAngleIndicator(B, C, A, angB, 'B');
+    drawAngleIndicator(C, A, B, angC, 'C');
+
+    // If max angle >= 120, highlight the obtuse vertex with a warning ring
+    if (maxAng >= 120) {
+      const obtPt = angA >= 120 ? A : angB >= 120 ? B : C;
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.4;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(obtPt.x, obtPt.y, 22, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
     // Determine Fermat point
     let fermatP: { x: number; y: number } | null = null;
     let isObtuse = false;
@@ -516,24 +649,44 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
         ctx.fillText(`${distPC.toFixed(0)}`, midCP.x + 4, midCP.y - 4);
       }
 
-      // Fermat point circle
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+      // Fermat point circle with pulsing outer halo
+      ctx.fillStyle = isObtuse ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.22)';
       ctx.beginPath();
-      ctx.arc(fermatP.x, fermatP.y, 14, 0, Math.PI * 2);
+      ctx.arc(fermatP.x, fermatP.y, 16, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#dc2626';
+      ctx.fillStyle = isObtuse ? '#ef4444' : '#10b981';
       ctx.beginPath();
-      ctx.arc(fermatP.x, fermatP.y, 6.5, 0, Math.PI * 2);
+      ctx.arc(fermatP.x, fermatP.y, 7, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      ctx.fillStyle = '#991b1b';
-      ctx.font = 'bold 12px sans-serif';
-      const labelP = isObtuse ? 'P (둔각 꼭짓점 = 페르마 점)' : 'P (페르마 점: 120° 균형)';
-      ctx.fillText(labelP, fermatP.x + 10, fermatP.y - 8);
+      // Fermat Point Label Badge
+      const obtName = angA >= 120 ? 'A' : angB >= 120 ? 'B' : 'C';
+      const labelP = isObtuse
+        ? `F (꼭짓점 ${obtName}과 일치: 내각≥120°)`
+        : 'F (페르마 점: 120° 균형)';
+      ctx.font = 'bold 11.5px sans-serif';
+      const pw = ctx.measureText(labelP).width;
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(fermatP.x + 12, fermatP.y - 18, pw + 14, 22, 5);
+      } else {
+        ctx.rect(fermatP.x + 12, fermatP.y - 18, pw + 14, 22);
+      }
+      ctx.fill();
+      ctx.strokeStyle = isObtuse ? '#ef4444' : '#10b981';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
+      ctx.fillStyle = isObtuse ? '#fca5a5' : '#a7f3d0';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(labelP, fermatP.x + 19, fermatP.y - 7);
+      ctx.textBaseline = 'alphabetic';
     }
 
     // Draw vertices A, B, C
@@ -553,85 +706,6 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
     });
   }, [fPoints, fermatZoom, fermatPan, showFermatConstruction]);
 
-  // =========================================================================
-  // 3. GRAPH CANVAS STATE (4-node adjacency matrix)
-  // =========================================================================
-  const graphCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [netNodes, setNetNodes] = useState([
-    { id: 'A', rx: 0.25, ry: 0.25, deg: 2 },
-    { id: 'B', rx: 0.75, ry: 0.25, deg: 3 },
-    { id: 'C', rx: 0.25, ry: 0.75, deg: 3 },
-    { id: 'D', rx: 0.75, ry: 0.75, deg: 2 },
-  ]);
-  const netEdges = [
-    ['A', 'B'],
-    ['A', 'C'],
-    ['B', 'C'],
-    ['B', 'D'],
-    ['C', 'D'],
-  ];
-  const dragNetIdxRef = useRef(-1);
-
-  const drawNetGraph = useCallback(() => {
-    const canvas = graphCanvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.scale(dpr, dpr);
-
-    const width = rect.width;
-    const height = rect.height;
-    ctx.clearRect(0, 0, width, height);
-
-    // Edges
-    ctx.strokeStyle = '#6366f1';
-    ctx.lineWidth = 3;
-    netEdges.forEach(([u, v]) => {
-      const p1 = netNodes.find((n) => n.id === u);
-      const p2 = netNodes.find((n) => n.id === v);
-      if (!p1 || !p2) return;
-      ctx.beginPath();
-      ctx.moveTo(p1.rx * width, p1.ry * height);
-      ctx.lineTo(p2.rx * width, p2.ry * height);
-      ctx.stroke();
-    });
-
-    // Nodes
-    netNodes.forEach((node) => {
-      const x = node.rx * width;
-      const y = node.ry * height;
-
-      ctx.fillStyle = '#4f46e5';
-      ctx.beginPath();
-      ctx.arc(x, y, 16, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#ffffff';
-      ctx.stroke();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 13px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(node.id, x, y);
-
-      // Degree Badge
-      ctx.fillStyle = '#10b981';
-      ctx.beginPath();
-      ctx.arc(x + 13, y - 13, 9.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillText(node.deg.toString(), x + 13, y - 13);
-    });
-    ctx.textAlign = 'left';
-  }, [netNodes]);
 
   // =========================================================================
   // 4. R0 SIMULATION CHART STATE
@@ -901,21 +975,19 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
   useEffect(() => {
     drawHeron();
     drawFermat();
-    drawNetGraph();
     drawR0Chart();
     drawSirChart();
 
     const handleResize = () => {
       drawHeron();
       drawFermat();
-      drawNetGraph();
       drawR0Chart();
       drawSirChart();
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [drawHeron, drawFermat, drawNetGraph, drawR0Chart, drawSirChart]);
+  }, [drawHeron, drawFermat, drawR0Chart, drawSirChart]);
 
   // Redraw Fermat when height changes
   useEffect(() => {
@@ -1313,6 +1385,62 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
                         ))}
                       </div>
                     </div>
+
+                    {/* Row 3: Live Angle Drag Slider & Real-time Degree Monitor */}
+                    <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-slate-200/80 flex-wrap bg-blue-50/60 -mx-3 -mb-1 px-3 py-2 rounded-b-lg text-xs">
+                      {/* Live Angle Slider for vertex A */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1 font-bold text-blue-900">
+                          <RotateCcw className="w-3.5 h-3.5 text-blue-600" />
+                          <span>각 ∠A 드래그 조절:</span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
+                          <span className="text-[11px] text-slate-400 font-mono">35°</span>
+                          <input
+                            type="range"
+                            min="35"
+                            max="145"
+                            step="1"
+                            value={Math.round(currentFermatAngA)}
+                            onChange={(e) => handleFermatAngleDrag(Number(e.target.value))}
+                            className="w-24 sm:w-32 accent-blue-600 cursor-pointer"
+                          />
+                          <span className="text-[11px] text-slate-400 font-mono">145°</span>
+                          <span
+                            className={`font-mono font-bold px-1.5 py-0.5 rounded text-[11px] ${
+                              currentFermatAngA >= 120
+                                ? 'bg-rose-100 text-rose-700 border border-rose-300 animate-pulse'
+                                : 'bg-blue-100 text-blue-800 border border-blue-200'
+                            }`}
+                          >
+                            ∠A: {Math.round(currentFermatAngA)}°{currentFermatAngA >= 120 ? ' ⚠️(≥120°)' : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Real-time Angle Badges of all 3 vertices */}
+                      <div className="flex items-center gap-1.5 flex-wrap font-mono font-bold text-[11px]">
+                        <span className="text-slate-500 font-sans font-medium">삼각형 내각:</span>
+                        <span className={`px-1.5 py-0.5 rounded ${currentFermatAngA >= 120 ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
+                          ∠A: {Math.round(currentFermatAngA)}°
+                        </span>
+                        <span className={`px-1.5 py-0.5 rounded ${currentFermatAngB >= 120 ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
+                          ∠B: {Math.round(currentFermatAngB)}°
+                        </span>
+                        <span className={`px-1.5 py-0.5 rounded ${currentFermatAngC >= 120 ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
+                          ∠C: {Math.round(currentFermatAngC)}°
+                        </span>
+                        {Math.max(currentFermatAngA, currentFermatAngB, currentFermatAngC) >= 120 ? (
+                          <span className="px-2 py-0.5 rounded bg-rose-600 text-white font-sans text-[11px] font-semibold">
+                            ⚠️ 페르마 점이 둔각 꼭짓점으로 흡수됨!
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-sans text-[11px] font-semibold">
+                            ✓ 내부 페르마 점 (세 각 120°)
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Interactive Canvas Container with Smooth Pan, Drag, and Wheel */}
@@ -1454,9 +1582,18 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
                 <div className="lg:col-span-5 flex flex-col justify-between space-y-4">
                   <div className="space-y-3">
                     <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
-                      <span className="font-bold">🧼 비눗방울 막(표면장력)의 최적화 해답</span>
-                      <br />
-                      비눗방울은 스스로 표면적(에너지)을 최소화합니다. 기둥 사이의 비눗막은 자연스럽게 <strong className="text-amber-950 font-mono">120°</strong>를 이루며 만납니다.
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold flex items-center gap-1">
+                          <Droplets className="w-3.5 h-3.5 text-amber-600" />
+                          <span>비눗방울 막(표면장력)의 최적화 해답</span>
+                        </span>
+                        <span className="text-[10px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded font-semibold">
+                          아래 실험실에서 실시간 시뮬레이션 중
+                        </span>
+                      </div>
+                      <p className="mt-1">
+                        비눗방울은 스스로 표면적(에너지)을 최소화합니다. 기둥 사이의 비눗막은 자연스럽게 <strong className="text-amber-950 font-mono">120°</strong>를 이루며 만납니다.
+                      </p>
                     </div>
 
                     {ansFermatQ && (
@@ -1493,6 +1630,9 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* [물리·수학 융합 실험] 비눗방울 막(표면장력) & 플라토의 법칙 실험실 */}
+            <SoapFilmLab />
           </div>
         )}
 
@@ -1501,128 +1641,8 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
         {/* ================================================================= */}
         {activeSection === 't2' && (
           <div className="space-y-6">
-            {/* 1. 네트워크 & 인접행렬 */}
-            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
-              <div className="flex items-center justify-between border-b pb-3 mb-4 flex-wrap gap-2">
-                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <span className="w-7 h-7 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm font-bold">
-                    1
-                  </span>
-                  인접 행렬(Adjacency Matrix)과 악수 정리
-                </h2>
-                <button
-                  onClick={() => setAnsNetMat(!ansNetMat)}
-                  className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold rounded-lg border border-indigo-200 transition flex items-center gap-1 cursor-pointer"
-                >
-                  <Lightbulb className="w-3.5 h-3.5" />
-                  <span>{ansNetMat ? '정답 접기' : '정답'}</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                <div className="lg:col-span-6 space-y-3">
-                  <p className="text-xs sm:text-sm text-slate-600">
-                    워크북에 제시된 <MathView tex="A, B, C, D" /> 4개 노드의 인접 행렬입니다.
-                  </p>
-                  <div className="bg-slate-900 text-slate-100 p-4 rounded-xl font-mono text-xs overflow-x-auto shadow-inner">
-                    <table className="w-full text-center">
-                      <thead>
-                        <tr className="border-b border-slate-700 text-slate-400">
-                          <th className="pb-1">노드</th>
-                          <th className="pb-1">A</th>
-                          <th className="pb-1">B</th>
-                          <th className="pb-1">C</th>
-                          <th className="pb-1">D</th>
-                          <th className="pb-1 text-emerald-400">차수(Degree)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-b border-slate-800">
-                          <td className="font-bold text-blue-400 py-1">A</td>
-                          <td>0</td>
-                          <td>1</td>
-                          <td>1</td>
-                          <td>0</td>
-                          <td className="text-emerald-400 font-bold">2</td>
-                        </tr>
-                        <tr className="border-b border-slate-800">
-                          <td className="font-bold text-blue-400 py-1">B</td>
-                          <td>1</td>
-                          <td>0</td>
-                          <td>1</td>
-                          <td>1</td>
-                          <td className="text-emerald-400 font-bold">3</td>
-                        </tr>
-                        <tr className="border-b border-slate-800">
-                          <td className="font-bold text-blue-400 py-1">C</td>
-                          <td>1</td>
-                          <td>1</td>
-                          <td>0</td>
-                          <td>1</td>
-                          <td className="text-emerald-400 font-bold">3</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold text-blue-400 py-1">D</td>
-                          <td>0</td>
-                          <td>1</td>
-                          <td>1</td>
-                          <td>0</td>
-                          <td className="text-emerald-400 font-bold">2</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {ansNetMat && (
-                    <div className="p-4 bg-indigo-50 border-l-4 border-indigo-600 rounded-r-xl text-xs sm:text-sm text-slate-800 space-y-2 animate-fadeIn">
-                      <p className="font-bold text-indigo-950">💡 공식 및 정답</p>
-                      <p>• 각 노드의 차수 합: <MathView tex="2 + 3 + 3 + 2 = 10" /></p>
-                      <p>• 총 엣지(연결선) 수: 5개 (<MathView tex="AB, AC, BC, BD, CD" />)</p>
-                      <p className="text-indigo-700 font-bold">
-                        차수의 총합 = <MathView tex="2 \times (\text{엣지의 수})" /> (악수 정리, Handshaking Lemma)
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="lg:col-span-6 bg-slate-50 rounded-xl p-3 border border-slate-200">
-                  <div
-                    className="w-full bg-white rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] relative touch-none cursor-grab"
-                    onPointerDown={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = e.clientX - rect.left;
-                      const y = e.clientY - rect.top;
-                      netNodes.forEach((n, idx) => {
-                        if (Math.hypot(n.rx * rect.width - x, n.ry * rect.height - y) < 26) {
-                          dragNetIdxRef.current = idx;
-                        }
-                      });
-                    }}
-                    onPointerMove={(e) => {
-                      if (dragNetIdxRef.current === -1) return;
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = Math.max(25, Math.min(rect.width - 25, e.clientX - rect.left));
-                      const y = Math.max(25, Math.min(rect.height - 25, e.clientY - rect.top));
-                      const nextNodes = [...netNodes];
-                      nextNodes[dragNetIdxRef.current] = {
-                        ...nextNodes[dragNetIdxRef.current],
-                        rx: x / rect.width,
-                        ry: y / rect.height,
-                      };
-                      setNetNodes(nextNodes);
-                    }}
-                    onPointerUp={() => {
-                      dragNetIdxRef.current = -1;
-                    }}
-                  >
-                    <canvas ref={graphCanvasRef} className="w-full h-full block" />
-                  </div>
-                  <p className="text-[11px] text-slate-500 text-center mt-2">
-                    노드를 마우스나 손가락으로 드래그하여 네트워크 형태를 조작해보세요.
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* 1. 네트워크 & 인접 행렬 다이어그램과 악수 정리 */}
+            <AdjacencyMatrixVisualizer />
 
             {/* 2. 지수적 폭발 & 소문의 확산 */}
             <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
@@ -1686,141 +1706,163 @@ export const WorkbookPage: React.FC<WorkbookPageProps> = ({
               )}
             </div>
 
-            {/* 3. R0 시뮬레이터 & 기본 표 */}
-            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
-              <div className="flex flex-wrap items-center justify-between border-b pb-3 mb-4 gap-2">
+            {/* 3. SIR 모델의 설계 */}
+            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 space-y-6">
+              <div className="flex flex-wrap items-center justify-between border-b pb-3 gap-2">
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <span className="w-7 h-7 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm font-bold">
+                    <span className="w-7 h-7 bg-indigo-600 text-white rounded-lg flex items-center justify-center text-sm font-bold shadow-xs">
                       3
                     </span>
-                    기초감염재생산수(<MathView tex="R_0" />)와 지수곡선 비교
+                    <span>SIR 모델의 설계</span>
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
-                    방역 조치에 따른 <MathView tex="R_0" /> 값의 변화가 감염자 수에 미치는 영향을 비교합니다.
+                    기초감염재생산수(<MathView tex="R_0" />)의 거듭제곱 확산 모델과 방역 정책을 통한 그래프 평탄화의 원리를 탐구합니다.
                   </p>
                 </div>
-                <button
-                  onClick={() => setAnsR0Table(!ansR0Table)}
-                  className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold rounded-lg border border-indigo-200 transition flex items-center gap-1 cursor-pointer"
-                >
-                  <Lightbulb className="w-3.5 h-3.5" />
-                  <span>{ansR0Table ? '표 정답 접기' : '워크북 3번 표 정답 & 풀이'}</span>
-                </button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                <div className="lg:col-span-4 space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                    <div>
-                      <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
-                        <span>상황 A (방역 미실시): <MathView tex="R_0" /></span>
-                        <span className="text-red-600 font-mono font-bold">{sliderR0A.toFixed(1)}</span>
+              {/* 3-1. 기초 감염재생산수와 지수곡선 */}
+              <div className="rounded-xl border border-slate-200 p-4 sm:p-5 bg-slate-50/60 space-y-4">
+                <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-2">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                      <span className="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-xs font-bold">
+                        3-1
+                      </span>
+                      <span>기초 감염재생산수(<MathView tex="R_0" />)와 지수곡선</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      방역 조치에 따른 <MathView tex="R_0" /> 값의 변화가 감염자 수에 미치는 영향을 비교합니다.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setAnsR0Table(!ansR0Table)}
+                    className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold rounded-lg border border-indigo-200 transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Lightbulb className="w-3.5 h-3.5" />
+                    <span>{ansR0Table ? '표 정답 접기' : '3-1 단계별 표 정답 & 풀이'}</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                  <div className="lg:col-span-4 space-y-4">
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+                      <div>
+                        <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                          <span>상황 A (방역 미실시): <MathView tex="R_0" /></span>
+                          <span className="text-red-600 font-mono font-bold">{sliderR0A.toFixed(1)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="1.5"
+                          max="4.0"
+                          step="0.1"
+                          value={sliderR0A}
+                          onChange={(e) => setSliderR0A(parseFloat(e.target.value))}
+                          className="w-full accent-red-600 cursor-pointer"
+                        />
                       </div>
-                      <input
-                        type="range"
-                        min="1.5"
-                        max="4.0"
-                        step="0.1"
-                        value={sliderR0A}
-                        onChange={(e) => setSliderR0A(parseFloat(e.target.value))}
-                        className="w-full accent-red-600 cursor-pointer"
-                      />
+
+                      <div className="pt-2 border-t border-slate-200">
+                        <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                          <span>상황 B (거리두기 실시): <MathView tex="R_0" /></span>
+                          <span className="text-blue-600 font-mono font-bold">{sliderR0B.toFixed(2)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.3"
+                          max="1.3"
+                          step="0.05"
+                          value={sliderR0B}
+                          onChange={(e) => setSliderR0B(parseFloat(e.target.value))}
+                          className="w-full accent-blue-600 cursor-pointer"
+                        />
+                      </div>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-200">
-                      <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
-                        <span>상황 B (거리두기 실시): <MathView tex="R_0" /></span>
-                        <span className="text-blue-600 font-mono font-bold">{sliderR0B.toFixed(2)}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.3"
-                        max="1.3"
-                        step="0.05"
-                        value={sliderR0B}
-                        onChange={(e) => setSliderR0B(parseFloat(e.target.value))}
-                        className="w-full accent-blue-600 cursor-pointer"
-                      />
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 leading-relaxed">
+                      <strong className="flex items-center gap-1 text-red-700 mb-1">
+                        <TriangleAlert className="w-3.5 h-3.5" />
+                        <span>의료 수용 한계선 (점선)</span>
+                      </strong>
+                      <MathView tex="R_0 > 1" />이면 단 몇 단계 만에 지수 폭발이 일어나 의료 붕괴가 발생합니다. 거리두기를 통해 <MathView tex="R_0 < 1" />로 억제해야 자연 소멸합니다.
                     </div>
                   </div>
 
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 leading-relaxed">
-                    <strong className="flex items-center gap-1 text-red-700 mb-1">
-                      <TriangleAlert className="w-3.5 h-3.5" />
-                      <span>의료 수용 한계선 (점선)</span>
-                    </strong>
-                    <MathView tex="R_0 > 1" />이면 단 몇 단계 만에 지수 폭발이 일어나 의료 붕괴가 발생합니다. 거리두기를 통해 <MathView tex="R_0 < 1" />로 억제해야 자연 소멸합니다.
+                  <div className="lg:col-span-8 bg-white p-3 rounded-xl border border-slate-200">
+                    <div className="w-full bg-white rounded-lg p-2 aspect-[16/9] relative">
+                      <canvas ref={r0CanvasRef} className="w-full h-full block" />
+                    </div>
                   </div>
                 </div>
 
-                <div className="lg:col-span-8 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <div className="w-full bg-white rounded-lg p-2 aspect-[16/9] relative border border-slate-200">
-                    <canvas ref={r0CanvasRef} className="w-full h-full block" />
+                {ansR0Table && (
+                  <div className="mt-4 pt-4 border-t border-slate-200 text-xs animate-fadeIn space-y-3">
+                    <div className="bg-indigo-50/70 p-4 rounded-xl border border-indigo-100 leading-relaxed">
+                      <h4 className="font-bold text-indigo-900 mb-2 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                        <span>📋 워크북 단계별 감염자 수 표 완성 (정답)</span>
+                      </h4>
+
+                      {/* 완성 표 */}
+                      <div className="overflow-x-auto my-2">
+                        <table className="min-w-full text-center border-collapse bg-white rounded-lg overflow-hidden border border-indigo-200 text-xs">
+                          <thead>
+                            <tr className="bg-indigo-100/70 text-indigo-950 font-bold border-b border-indigo-200">
+                              <th className="py-2 px-3">구분</th>
+                              <th className="py-2 px-3">0단계(초기)</th>
+                              <th className="py-2 px-3">1단계</th>
+                              <th className="py-2 px-3">2단계</th>
+                              <th className="py-2 px-3">3단계</th>
+                              <th className="py-2 px-3">4단계</th>
+                              <th className="py-2 px-3">5단계</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-indigo-100">
+                            <tr className="hover:bg-red-50/50">
+                              <td className="py-2 px-3 font-bold text-red-700">상황 A (<MathView tex="R_0=3" />)</td>
+                              <td className="py-2 px-3">1</td>
+                              <td className="py-2 px-3">3</td>
+                              <td className="py-2 px-3">9</td>
+                              <td className="py-2 px-3 font-bold text-red-600 bg-red-50/70">27</td>
+                              <td className="py-2 px-3 font-bold text-red-600 bg-red-50/70">81</td>
+                              <td className="py-2 px-3 font-bold text-red-600 bg-red-100/80">243명</td>
+                            </tr>
+                            <tr className="hover:bg-blue-50/50">
+                              <td className="py-2 px-3 font-bold text-blue-700">상황 B (<MathView tex="R_0=0.8" />)</td>
+                              <td className="py-2 px-3">1</td>
+                              <td className="py-2 px-3">0.8</td>
+                              <td className="py-2 px-3">0.64</td>
+                              <td className="py-2 px-3 font-bold text-blue-600 bg-blue-50/70">0.512</td>
+                              <td className="py-2 px-3 font-bold text-blue-600 bg-blue-50/70">0.4096</td>
+                              <td className="py-2 px-3 font-bold text-blue-600 bg-blue-100/80">0.32768명</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="p-3 bg-white rounded-lg border border-indigo-200 mt-2 space-y-1.5 text-slate-800">
+                        <p>
+                          • <strong>수식 비교:</strong> 상황 A는 <MathView tex="3^t" />, 상황 B는 <MathView tex="(0.8)^t" /> 곡선입니다.
+                        </p>
+                        <p>
+                          • <strong>5단계 비율 계산:</strong>{' '}
+                          <MathView tex="\frac{243}{0.32768} \approx \mathbf{741.5배}" />
+                        </p>
+                        <p className="text-indigo-900 font-semibold">
+                          💡 단 5차수(세대) 만에 방역 조치 유무에 따라 감염자 수가 무려 <strong>741배 이상</strong> 차이가 벌어집니다!
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
-              {ansR0Table && (
-                <div className="mt-4 pt-4 border-t border-slate-200 text-xs animate-fadeIn space-y-3">
-                  <div className="bg-indigo-50/70 p-4 rounded-xl border border-indigo-100 leading-relaxed">
-                    <h4 className="font-bold text-indigo-900 mb-2 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-indigo-600" />
-                      <span>📋 워크북 단계별 감염자 수 표 완성 (정답)</span>
-                    </h4>
-
-                    {/* 완성 표 */}
-                    <div className="overflow-x-auto my-2">
-                      <table className="min-w-full text-center border-collapse bg-white rounded-lg overflow-hidden border border-indigo-200 text-xs">
-                        <thead>
-                          <tr className="bg-indigo-100/70 text-indigo-950 font-bold border-b border-indigo-200">
-                            <th className="py-2 px-3">구분</th>
-                            <th className="py-2 px-3">0단계(초기)</th>
-                            <th className="py-2 px-3">1단계</th>
-                            <th className="py-2 px-3">2단계</th>
-                            <th className="py-2 px-3">3단계</th>
-                            <th className="py-2 px-3">4단계</th>
-                            <th className="py-2 px-3">5단계</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-indigo-100">
-                          <tr className="hover:bg-red-50/50">
-                            <td className="py-2 px-3 font-bold text-red-700">상황 A (<MathView tex="R_0=3" />)</td>
-                            <td className="py-2 px-3">1</td>
-                            <td className="py-2 px-3">3</td>
-                            <td className="py-2 px-3">9</td>
-                            <td className="py-2 px-3 font-bold text-red-600 bg-red-50/70">27</td>
-                            <td className="py-2 px-3 font-bold text-red-600 bg-red-50/70">81</td>
-                            <td className="py-2 px-3 font-bold text-red-600 bg-red-100/80">243명</td>
-                          </tr>
-                          <tr className="hover:bg-blue-50/50">
-                            <td className="py-2 px-3 font-bold text-blue-700">상황 B (<MathView tex="R_0=0.8" />)</td>
-                            <td className="py-2 px-3">1</td>
-                            <td className="py-2 px-3">0.8</td>
-                            <td className="py-2 px-3">0.64</td>
-                            <td className="py-2 px-3 font-bold text-blue-600 bg-blue-50/70">0.512</td>
-                            <td className="py-2 px-3 font-bold text-blue-600 bg-blue-50/70">0.4096</td>
-                            <td className="py-2 px-3 font-bold text-blue-600 bg-blue-100/80">0.32768명</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="p-3 bg-white rounded-lg border border-indigo-200 mt-2 space-y-1.5 text-slate-800">
-                      <p>
-                        • <strong>수식 비교:</strong> 상황 A는 <MathView tex="3^t" />, 상황 B는 <MathView tex="(0.8)^t" /> 곡선입니다.
-                      </p>
-                      <p>
-                        • <strong>5단계 비율 계산:</strong>
-                        <MathView tex="\frac{243}{0.32768} \approx \mathbf{741.5배}" />
-                      </p>
-                      <p className="text-indigo-900 font-semibold">
-                        💡 단 5차수(세대) 만에 방역 조치 유무에 따라 감염자 수가 무려 <strong>741배 이상</strong> 차이가 벌어집니다!
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* 3-2. R_0와 그래프 평탄화 */}
+              <div>
+                <FlattenCurveVisualizer externalAnsOpen={showAllAnswers} />
+              </div>
             </div>
 
             {/* 4. 집단면역 임계치 & 백신 우선 접종 전략 (허브 vs 무작위) */}

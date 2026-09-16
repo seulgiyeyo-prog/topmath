@@ -16,6 +16,7 @@ export const FermatTab: React.FC = () => {
   const [bestSum, setBestSum] = useState<number | null>(null);
   const [dragging, setDragging] = useState<'A' | 'B' | 'C' | 'P' | 'PAN' | null>(null);
   const [showConstruction, setShowConstruction] = useState(true);
+  const [autoTrackFermat, setAutoTrackFermat] = useState<boolean>(true);
 
   // 화면 줌 & 팬 (확대/축소 및 이동) 상태
   const [zoom, setZoom] = useState<number>(1);
@@ -63,23 +64,46 @@ export const FermatTab: React.FC = () => {
     return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
   };
 
-  const getTrueFermat = (): Point => {
-    const aA = angleAt(A, B, C);
-    const aB = angleAt(B, A, C);
-    const aC = angleAt(C, A, B);
+  const computeFermat = (pA: Point, pB: Point, pC: Point): Point => {
+    const aA = angleAt(pA, pB, pC);
+    const aB = angleAt(pB, pA, pC);
+    const aC = angleAt(pC, pA, pB);
     const maxA = Math.max(aA, aB, aC);
 
     // 120도 이상인 둔각이 있으면 해당 꼭짓점이 최단 거리점(페르마점)
     if (maxA >= 120) {
-      if (aA === maxA) return A;
-      if (aB === maxA) return B;
-      return C;
+      if (aA === maxA) return pA;
+      if (aB === maxA) return pB;
+      return pC;
     }
 
-    const apAB = apexOutward(A, B, C);
-    const apBC = apexOutward(B, C, A);
-    const inter = lineIntersect(C, apAB, A, apBC);
-    return inter || { x: (A.x + B.x + C.x) / 3, y: (A.y + B.y + C.y) / 3 };
+    const apAB = apexOutward(pA, pB, pC);
+    const apBC = apexOutward(pB, pC, pA);
+    const inter = lineIntersect(pC, apAB, pA, apBC);
+    return inter || { x: (pA.x + pB.x + pC.x) / 3, y: (pA.y + pB.y + pC.y) / 3 };
+  };
+
+  const getTrueFermat = (): Point => computeFermat(A, B, C);
+
+  const handleAngleCChange = (targetDeg: number) => {
+    const rad = (targetDeg * Math.PI) / 180;
+    const midX = (A.x + B.x) / 2;
+    const midY = (A.y + B.y) / 2;
+    const baseLen = Math.hypot(B.x - A.x, B.y - A.y) || 1;
+    const baseAngle = Math.atan2(B.y - A.y, B.x - A.x);
+    const normAngle = baseAngle - Math.PI / 2;
+    const halfAngle = Math.max(0.12, Math.min(Math.PI / 2 - 0.05, rad / 2));
+    const h = (baseLen / 2) / Math.tan(halfAngle);
+    const newC = {
+      x: midX + h * Math.cos(normAngle),
+      y: midY + h * Math.sin(normAngle),
+    };
+    setC(newC);
+
+    if (autoTrackFermat) {
+      const newF = computeFermat(A, B, newC);
+      setP(newF);
+    }
   };
 
   const pa = dist(P, A);
@@ -249,13 +273,105 @@ export const FermatTab: React.FC = () => {
     }
 
     const pos = getLocalPos(e);
-    if (dragging === 'A') setA({ x: pos.x, y: pos.y });
-    else if (dragging === 'B') setB({ x: pos.x, y: pos.y });
-    else if (dragging === 'C') setC({ x: pos.x, y: pos.y });
-    else if (dragging === 'P') setP({ x: pos.x, y: pos.y });
+    let nextA = A;
+    let nextB = B;
+    let nextC = C;
+
+    if (dragging === 'A') {
+      nextA = { x: pos.x, y: pos.y };
+      setA(nextA);
+    } else if (dragging === 'B') {
+      nextB = { x: pos.x, y: pos.y };
+      setB(nextB);
+    } else if (dragging === 'C') {
+      nextC = { x: pos.x, y: pos.y };
+      setC(nextC);
+    } else if (dragging === 'P') {
+      setP({ x: pos.x, y: pos.y });
+      setAutoTrackFermat(false);
+      return;
+    }
+
+    if (autoTrackFermat) {
+      const newF = computeFermat(nextA, nextB, nextC);
+      setP(newF);
+    }
   };
 
   const handlePointerUp = () => setDragging(null);
+
+  const obtuseVertexName = maxAngle >= 120 ? (angleA === maxAngle ? 'A' : angleB === maxAngle ? 'B' : 'C') : null;
+  const obtuseVertex = obtuseVertexName === 'A' ? A : obtuseVertexName === 'B' ? B : obtuseVertexName === 'C' ? C : null;
+
+  const renderAngleIndicator = (
+    vertex: Point,
+    p1: Point,
+    p2: Point,
+    deg: number,
+    label: string
+  ) => {
+    const r = 26;
+    const ang1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
+    const ang2 = Math.atan2(p2.y - vertex.y, p2.x - vertex.x);
+
+    let diff = ang2 - ang1;
+    while (diff < 0) diff += 2 * Math.PI;
+    while (diff >= 2 * Math.PI) diff -= 2 * Math.PI;
+
+    let startAng = ang1;
+    let sweep = diff;
+
+    if (diff > Math.PI) {
+      startAng = ang2;
+      sweep = 2 * Math.PI - diff;
+    }
+
+    const endAng = startAng + sweep;
+    const x1 = vertex.x + r * Math.cos(startAng);
+    const y1 = vertex.y + r * Math.sin(startAng);
+    const x2 = vertex.x + r * Math.cos(endAng);
+    const y2 = vertex.y + r * Math.sin(endAng);
+
+    const midAng = startAng + sweep / 2;
+    const labelDist = r + 20;
+    const lx = vertex.x + labelDist * Math.cos(midAng);
+    const ly = vertex.y + labelDist * Math.sin(midAng);
+
+    const isObtuse = deg >= 120;
+
+    return (
+      <g key={label} className="pointer-events-none select-none">
+        <path
+          d={`M ${vertex.x} ${vertex.y} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`}
+          fill={isObtuse ? 'rgba(244, 63, 94, 0.3)' : 'rgba(231, 169, 61, 0.22)'}
+          stroke={isObtuse ? '#F43F5E' : '#E7A93D'}
+          strokeWidth={1.8}
+        />
+        <rect
+          x={lx - 25}
+          y={ly - 10}
+          width={50}
+          height={20}
+          rx={5}
+          fill={isObtuse ? '#881337' : '#0B2138'}
+          stroke={isObtuse ? '#F43F5E' : '#E7A93D'}
+          strokeWidth={1.5}
+          fillOpacity={0.92}
+        />
+        <text
+          x={lx}
+          y={ly + 4}
+          fill={isObtuse ? '#FECDD3' : '#FDE68A'}
+          fontSize={10.5}
+          fontWeight={800}
+          fontFamily="JetBrains Mono, monospace"
+          textAnchor="middle"
+        >
+          {label}:{Math.round(deg)}°
+        </text>
+      </g>
+    );
+  };
 
   return (
     <div>
@@ -282,8 +398,87 @@ export const FermatTab: React.FC = () => {
         {/* SVG Interactive Canvas Container */}
         <div className="lg:col-span-2 bg-[#0E2A45] border border-[#2C567F] rounded-xl p-2 relative overflow-hidden shadow-inner flex flex-col justify-between">
           
+          {/* Interactive Angle Drag Controller Bar */}
+          <div className="bg-[#153A5C]/95 border-b border-[#2C567F] p-3 rounded-t-lg flex flex-wrap items-center justify-between gap-3 text-xs z-10">
+            {/* Angle C Drag Slider */}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="flex items-center gap-1.5 font-bold text-[#E7A93D]">
+                <RotateCcw className="w-3.5 h-3.5 text-[#E7A93D]" />
+                <span>각 ∠C 실시간 드래그:</span>
+              </div>
+              <div className="flex items-center gap-2 bg-[#0E2A45] px-3 py-1.5 rounded-lg border border-[#2C567F]">
+                <span className="text-[11px] text-[#9FC0DC]">35°</span>
+                <input
+                  type="range"
+                  min="35"
+                  max="145"
+                  step="1"
+                  value={Math.round(angleC)}
+                  onChange={(e) => handleAngleCChange(Number(e.target.value))}
+                  className="w-28 sm:w-36 accent-[#E7A93D] cursor-pointer"
+                />
+                <span className="text-[11px] text-[#9FC0DC]">145°</span>
+                <span
+                  className={`font-mono font-bold px-2 py-0.5 rounded text-xs ${
+                    angleC >= 120
+                      ? 'bg-rose-500/25 text-rose-300 border border-rose-500/50 animate-pulse'
+                      : 'bg-[#E7A93D]/20 text-[#E7A93D] border border-[#E7A93D]/40'
+                  }`}
+                >
+                  ∠C: {Math.round(angleC)}°{angleC >= 120 ? ' ⚠️(≥120°)' : ''}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Angle Presets */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[#9FC0DC] text-[11px] hidden sm:inline">프리셋:</span>
+              <button
+                onClick={() => handleAngleCChange(60)}
+                className="px-2 py-1 bg-[#0E2A45] hover:bg-[#1B4468] text-[#9FC0DC] hover:text-[#EAF3FC] border border-[#2C567F] rounded text-[11px] font-semibold transition cursor-pointer"
+              >
+                🔺 60° (정삼각형)
+              </button>
+              <button
+                onClick={() => handleAngleCChange(90)}
+                className="px-2 py-1 bg-[#0E2A45] hover:bg-[#1B4468] text-[#9FC0DC] hover:text-[#EAF3FC] border border-[#2C567F] rounded text-[11px] font-semibold transition cursor-pointer"
+              >
+                📐 90° (직각)
+              </button>
+              <button
+                onClick={() => handleAngleCChange(115)}
+                className="px-2 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 rounded text-[11px] font-semibold transition cursor-pointer"
+              >
+                ⚡ 115° (임계 직전)
+              </button>
+              <button
+                onClick={() => handleAngleCChange(125)}
+                className="px-2 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 rounded text-[11px] font-semibold transition cursor-pointer"
+              >
+                ⚠️ 125° (120° 둔각)
+              </button>
+            </div>
+
+            {/* Auto-Track Toggle */}
+            <label className="flex items-center gap-1.5 cursor-pointer select-none bg-[#0E2A45] px-2.5 py-1 rounded-lg border border-[#2C567F] text-[#9FC0DC] hover:text-[#EAF3FC]">
+              <input
+                type="checkbox"
+                checked={autoTrackFermat}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setAutoTrackFermat(checked);
+                  if (checked) {
+                    setP(getTrueFermat());
+                  }
+                }}
+                className="accent-[#6FCF97] cursor-pointer"
+              />
+              <span className="text-[11px] font-semibold">P를 페르마점(F)에 실시간 고정</span>
+            </label>
+          </div>
+
           {/* Floating Zoom & View Controls Overlay */}
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-[#0B2138]/90 backdrop-blur-sm border border-[#2C567F] p-1.5 rounded-lg shadow-lg flex-wrap">
+          <div className="absolute top-16 right-4 z-20 flex items-center gap-1.5 bg-[#0B2138]/90 backdrop-blur-sm border border-[#2C567F] p-1.5 rounded-lg shadow-lg flex-wrap">
             <button
               onClick={() => handleZoom(1.15)}
               title="확대 (Zoom In)"
@@ -441,6 +636,114 @@ export const FermatTab: React.FC = () => {
                 stroke="#7FC4EE"
                 strokeWidth={2.5}
               />
+
+              {/* Real-time Angle Indicators at Vertices A, B, C */}
+              {renderAngleIndicator(A, B, C, angleA, '∠A')}
+              {renderAngleIndicator(B, C, A, angleB, '∠B')}
+              {renderAngleIndicator(C, A, B, angleC, '∠C')}
+
+              {/* If obtuse vertex (>=120°), highlight absorption */}
+              {isObtuse120 && obtuseVertex && (
+                <g className="pointer-events-none select-none">
+                  <circle
+                    cx={obtuseVertex.x}
+                    cy={obtuseVertex.y}
+                    r={22}
+                    fill="none"
+                    stroke="#F43F5E"
+                    strokeWidth={2.5}
+                    strokeDasharray="4 3"
+                  >
+                    <animate attributeName="r" values="16;26;16" dur="1.6s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.9;0.2;0.9" dur="1.6s" repeatCount="indefinite" />
+                  </circle>
+                  <g transform={`translate(${obtuseVertex.x - 75}, ${obtuseVertex.y - 32})`}>
+                    <rect width={150} height={20} rx={4} fill="#881337" stroke="#F43F5E" strokeWidth={1} fillOpacity={0.95} />
+                    <text x={75} y={14} fill="#FECDD3" fontSize={10} fontWeight={800} textAnchor="middle">
+                      내각 ≥ 120°: 페르마점 = 꼭짓점 {obtuseVertexName}
+                    </text>
+                  </g>
+                </g>
+              )}
+
+              {/* Theoretical Fermat Point F (Always explicitly rendered and moving in real-time) */}
+              <g className="pointer-events-none select-none">
+                {/* Dashed optimal road lines from F to A, B, C */}
+                <line x1={A.x} y1={A.y} x2={trueFermat.x} y2={trueFermat.y} stroke="#6FCF97" strokeWidth={2} strokeDasharray="4 3" opacity={0.75} />
+                <line x1={B.x} y1={B.y} x2={trueFermat.x} y2={trueFermat.y} stroke="#6FCF97" strokeWidth={2} strokeDasharray="4 3" opacity={0.75} />
+                <line x1={C.x} y1={C.y} x2={trueFermat.x} y2={trueFermat.y} stroke="#6FCF97" strokeWidth={2} strokeDasharray="4 3" opacity={0.75} />
+
+                {/* Outer animated halo around F */}
+                <circle
+                  cx={trueFermat.x}
+                  cy={trueFermat.y}
+                  r={18}
+                  fill="none"
+                  stroke={isObtuse120 ? '#F43F5E' : '#6FCF97'}
+                  strokeWidth={2}
+                >
+                  <animate attributeName="r" values="12;22;12" dur="2s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.8;0.2;0.8" dur="2s" repeatCount="indefinite" />
+                </circle>
+
+                {/* F Point core */}
+                <circle
+                  cx={trueFermat.x}
+                  cy={trueFermat.y}
+                  r={8.5}
+                  fill={isObtuse120 ? '#F43F5E' : '#6FCF97'}
+                  stroke="#0B2138"
+                  strokeWidth={2.5}
+                />
+                <circle cx={trueFermat.x} cy={trueFermat.y} r={2.5} fill="#FFFFFF" />
+
+                {/* Badge for F */}
+                <g transform={`translate(${trueFermat.x + 12}, ${trueFermat.y - 12})`}>
+                  <rect
+                    x={0}
+                    y={-12}
+                    width={isObtuse120 ? 160 : 135}
+                    height={22}
+                    rx={5}
+                    fill="#0B2138"
+                    stroke={isObtuse120 ? '#F43F5E' : '#6FCF97'}
+                    strokeWidth={1.5}
+                    fillOpacity={0.92}
+                  />
+                  <text
+                    x={7}
+                    y={4}
+                    fill={isObtuse120 ? '#FDA4AF' : '#A7F3D0'}
+                    fontSize={10.5}
+                    fontWeight={800}
+                    fontFamily="sans-serif"
+                  >
+                    {isObtuse120 ? `F (꼭짓점 ${obtuseVertexName}과 일치)` : 'F (페르마 점: 120°)'}
+                  </text>
+                </g>
+              </g>
+
+              {/* If user dragged P away from F, show deviation line */}
+              {!autoTrackFermat && Math.hypot(P.x - trueFermat.x, P.y - trueFermat.y) > 4 && (
+                <g className="pointer-events-none select-none">
+                  <line
+                    x1={P.x}
+                    y1={P.y}
+                    x2={trueFermat.x}
+                    y2={trueFermat.y}
+                    stroke="#E7A93D"
+                    strokeWidth={1.5}
+                    strokeDasharray="4 3"
+                    opacity={0.8}
+                  />
+                  <g transform={`translate(${(P.x + trueFermat.x) / 2 + 8}, ${(P.y + trueFermat.y) / 2 - 8})`}>
+                    <rect x={0} y={-10} width={96} height={18} rx={4} fill="#0E2A45" stroke="#E7A93D" strokeWidth={1} fillOpacity={0.9} />
+                    <text x={6} y={3} fill="#FDE68A" fontSize={9.5} fontWeight={700}>
+                      +{(currentSum - trueMin).toFixed(1)} 추가 거리
+                    </text>
+                  </g>
+                </g>
+              )}
 
               {/* Road lines from P to A, B, C */}
               <line
