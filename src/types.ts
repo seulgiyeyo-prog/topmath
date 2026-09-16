@@ -3,7 +3,7 @@ export interface NodePosition {
   y: number;
 }
 
-export type CourseId = 'home' | 'geometry' | 'diffusion' | 'bone';
+export type CourseId = 'home' | 'geometry' | 'diffusion' | 'bone' | 'workbook';
 
 export type MissionKey =
   | 'net'

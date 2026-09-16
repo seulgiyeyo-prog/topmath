@@ -4,6 +4,7 @@ import { CourseSelectionPage } from './components/CourseSelectionPage';
 import { DiffusionLab } from './components/DiffusionLab';
 import { GeometryLab } from './components/geometry/GeometryLab';
 import { BoneHealingLab } from './components/bone/BoneHealingLab';
+import { WorkbookPage } from './components/workbook/WorkbookPage';
 
 interface ToastItem {
   id: string;
@@ -13,12 +14,13 @@ interface ToastItem {
 }
 
 export default function App() {
-  // Read initial course from URL hash if available (#diffusion or #geometry or #bone)
+  // Read initial course from URL hash if available (#diffusion or #geometry or #bone or #workbook)
   const getInitialCourse = (): CourseId => {
     const hash = window.location.hash.replace('#', '');
     if (hash === 'diffusion') return 'diffusion';
     if (hash === 'geometry') return 'geometry';
     if (hash === 'bone') return 'bone';
+    if (hash === 'workbook') return 'workbook';
     return 'home';
   };
 
@@ -71,6 +73,8 @@ export default function App() {
       const hash = window.location.hash.replace('#', '');
       if (hash === 'diffusion') setCurrentCourse('diffusion');
       else if (hash === 'geometry') setCurrentCourse('geometry');
+      else if (hash === 'bone') setCurrentCourse('bone');
+      else if (hash === 'workbook') setCurrentCourse('workbook');
       else setCurrentCourse('home');
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -263,6 +267,7 @@ export default function App() {
           onLaunchConfetti={launchConfetti}
           onGoHome={() => setCourse('home')}
           onSwitchToGeometry={() => setCourse('geometry')}
+          onOpenWorkbook={() => setCourse('workbook')}
         />
       )}
 
@@ -270,6 +275,7 @@ export default function App() {
         <GeometryLab
           onGoHome={() => setCourse('home')}
           onSwitchToDiffusion={() => setCourse('diffusion')}
+          onOpenWorkbook={() => setCourse('workbook')}
         />
       )}
 
@@ -279,6 +285,14 @@ export default function App() {
           onAddXP={addXP}
           onCompleteMission={completeMission}
           onLaunchConfetti={launchConfetti}
+          onGoHome={() => setCourse('home')}
+          onSwitchToGeometry={() => setCourse('geometry')}
+          onSwitchToDiffusion={() => setCourse('diffusion')}
+        />
+      )}
+
+      {currentCourse === 'workbook' && (
+        <WorkbookPage
           onGoHome={() => setCourse('home')}
           onSwitchToGeometry={() => setCourse('geometry')}
           onSwitchToDiffusion={() => setCourse('diffusion')}

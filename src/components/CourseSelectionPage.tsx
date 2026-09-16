@@ -38,9 +38,20 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
             </div>
           </div>
 
-          <div className="text-xs text-[#9FC0DC] hidden sm:flex items-center gap-1.5 font-medium">
-            <Layers className="w-4 h-4 text-[#3FA796]" />
-            <span>기하 최적화 · 네트워크 확산 · 생명현상 미분방정식 랩 완비</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onSelectCourse('workbook')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:scale-105"
+              title="교재 문제 풀이와 정답 확인을 한 화면에서 진행할 수 있는 워크북 플랫폼"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>📖 교재 정답 & 워크북 확인</span>
+            </button>
+
+            <div className="text-xs text-[#9FC0DC] hidden lg:flex items-center gap-1.5 font-medium">
+              <Layers className="w-4 h-4 text-[#3FA796]" />
+              <span>기하 최적화 · 네트워크 확산 · 생명수학 완비</span>
+            </div>
           </div>
         </div>
       </header>
@@ -58,6 +69,39 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
 
       {/* Main Course Grid */}
       <main className="relative max-w-6xl mx-auto px-5 mt-4 space-y-7">
+        {/* NEW FEATURE CARD: 2026 중등영재 수학 워크북 & 교재 정답 확인관 */}
+        <div className="bg-gradient-to-r from-[#0F2942] via-[#153A5C] to-[#0D253A] border-2 border-[#0284c7] rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden group hover:border-[#38bdf8] transition-all">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-3 py-1 rounded-full bg-[#0284c7]/30 border border-[#0284c7]/50 text-[#38bdf8] text-xs font-bold font-mono flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>2026 중등영재 수학 정규 교재 연계 워크북</span>
+                </span>
+                <span className="px-2.5 py-0.5 rounded-md bg-[#10b981]/20 border border-[#10b981]/40 text-[#34d399] text-[11px] font-bold">
+                  ✨ 전 문항 실시간 정답 & 해설 수록
+                </span>
+              </div>
+
+              <h2 className="text-xl sm:text-2xl font-bold font-serif text-white flex items-center gap-2">
+                <span>📖 2026 인터랙티브 워크북 & 교재 정답 확인관</span>
+              </h2>
+
+              <p className="text-xs sm:text-sm text-[#9FC0DC] max-w-3xl leading-relaxed">
+                수업 중에 빔프로젝터나 태블릿으로 띄워놓고 학생들과 질문-답변을 나누며 즉시 <strong>[정답 및 해설]</strong>을 확인하고,{' '}
+                <strong>헤론 대칭 작도기</strong>, <strong>페르마 점 줌 캔버스</strong>, <strong>인접 행렬 악수 정리</strong>, <strong>R₀ 지수곡선 표</strong>, <strong>신종 바이러스 '수학-26' SIR 예측 모델</strong>을 직접 시뮬레이션할 수 있습니다.
+              </p>
+            </div>
+
+            <button
+              onClick={() => onSelectCourse('workbook')}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] text-white font-bold text-sm shadow-xl transition-all cursor-pointer hover:scale-105 shrink-0"
+            >
+              <span>교재 워크북 & 정답관 열기</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
         {/* TOP ROW: Course 1 (Geometry) & Course 2 (Diffusion) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-7">
           {/* COURSE 1: 기하 최적화와 페르마 점 */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Scissors, Play, RotateCcw, CheckCircle2, AlertTriangle, Sparkles, HelpCircle, Building2, Stethoscope, Plane, Server, School } from 'lucide-react';
+import { Shield, Scissors, Play, RotateCcw, CheckCircle2, AlertTriangle, Sparkles, HelpCircle, Building2, Stethoscope, Plane, Server, School, Landmark, Radio, Factory, Zap } from 'lucide-react';
 
 interface ScenarioNode {
   id: number;
@@ -20,7 +20,7 @@ interface BridgeScenario {
   title: string;
   subtitle: string;
   badge: string;
-  icon: 'school' | 'hospital' | 'city' | 'server' | 'plane';
+  icon: 'school' | 'hospital' | 'city' | 'server' | 'plane' | 'bridge' | 'fortress' | 'bypass' | 'factory';
   groupAName: string;
   groupBName: string;
   patientZero: number;
@@ -254,6 +254,178 @@ export const BridgePuzzleTab: React.FC<{
         { from: 8, to: 9 },
       ],
     },
+    {
+      id: 'single-canyon',
+      title: '외딴 섬 유일한 연륙교',
+      subtitle: '단 1개 브릿지 차단 (초급 개념편)',
+      badge: '🌉 1-Cut 단일 브릿지',
+      icon: 'bridge',
+      groupAName: '외딴 섬 어촌마을 (발원지)',
+      groupBName: '본토 주민 거주구 (보호 대상)',
+      patientZero: 0,
+      patientZeroLabel: '섬 포구 환자',
+      maxCuts: 1,
+      story: '외딴 섬의 어촌 포구에서 미지의 감염이 시작되었습니다! 섬과 본토를 이어주는 유일한 해상 현수교 딱 1개만 신속히 차단하면 본토 주민 전원을 완벽히 지킬 수 있습니다.',
+      mathLesson: '그래프에서 어떤 변(Edge) 하나를 제거했을 때 연결 요소의 개수가 1개에서 2개로 분리된다면, 이 변을 "절단선(Bridge)"이라고 부릅니다. 브릿지는 방역망의 절대적 병목점입니다.',
+      nodes: [
+        // Group A (Island)
+        { id: 0, label: '섬 포구 (감염원)', x: 80, y: 140, group: 'A' },
+        { id: 1, label: '섬 등대', x: 80, y: 280, group: 'A' },
+        { id: 2, label: '섬마을 시장', x: 170, y: 210, group: 'A' },
+        { id: 3, label: '현수교 섬 입구', x: 250, y: 210, group: 'A' },
+
+        // Group B (Mainland)
+        { id: 4, label: '현수교 본토 톨게이트', x: 360, y: 210, group: 'B' },
+        { id: 5, label: '본토 해안마을', x: 440, y: 120, group: 'B' },
+        { id: 6, label: '본토 시가지', x: 520, y: 150, group: 'B' },
+        { id: 7, label: '본토 종합병원', x: 440, y: 300, group: 'B' },
+        { id: 8, label: '본토 터미널', x: 520, y: 270, group: 'B' },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 1, to: 2 },
+        { from: 2, to: 3 },
+        // The Single Bridge connecting Island to Mainland!
+        { from: 3, to: 4, isBridge: true },
+        { from: 4, to: 5 },
+        { from: 4, to: 7 },
+        { from: 5, to: 6 },
+        { from: 6, to: 8 },
+        { from: 7, to: 8 },
+        { from: 5, to: 7 },
+      ],
+    },
+    {
+      id: 'tri-fortress',
+      title: '3대 성벽 관문과 내성',
+      subtitle: '북문·중앙문·남문 동시 봉쇄 (3-Cut 중급)',
+      badge: '🏰 3-Cut 성벽 요새',
+      icon: 'fortress',
+      groupAName: '외곽 저잣거리 (감염 확산)',
+      groupBName: '내성 왕실 & 구휼원 (보호 대상)',
+      patientZero: 0,
+      patientZeroLabel: '저잣거리 주막',
+      maxCuts: 3,
+      story: '성 밖 저잣거리에서 전염병이 창궐했습니다! 내성으로 통하는 3개의 관문(북문, 중앙 대문, 남문)을 모두 폐쇄하여 내성 안쪽 주민들을 보호하세요.',
+      mathLesson: '두 집단 사이에 겹치지 않는 경로가 3개 존재할 때(Menger의 정리), 두 집단을 완벽히 분리하려면 최소 3개의 변(Min-Cut=3)을 끊어야 합니다.',
+      nodes: [
+        // Group A (Outer Marketplace)
+        { id: 0, label: '저잣거리 주막', x: 80, y: 210, group: 'A' },
+        { id: 1, label: '북쪽 장터', x: 180, y: 110, group: 'A' },
+        { id: 2, label: '중앙 나들목', x: 180, y: 210, group: 'A' },
+        { id: 3, label: '남쪽 축사', x: 180, y: 310, group: 'A' },
+        { id: 4, label: '외곽 마구간', x: 100, y: 320, group: 'A' },
+
+        // Group B (Inner Royal Fortress)
+        { id: 5, label: '성벽 북문', x: 370, y: 110, group: 'B' },
+        { id: 6, label: '북부 궁채', x: 480, y: 90, group: 'B' },
+        { id: 7, label: '성벽 중앙문', x: 370, y: 210, group: 'B' },
+        { id: 8, label: '중앙 정전', x: 480, y: 210, group: 'B' },
+        { id: 9, label: '성벽 남문', x: 370, y: 310, group: 'B' },
+        { id: 10, label: '남부 병영', x: 480, y: 330, group: 'B' },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 0, to: 3 },
+        { from: 3, to: 4 },
+        { from: 1, to: 2 },
+        { from: 2, to: 3 },
+        // 3 Bridges through 3 Gates
+        { from: 1, to: 5, isBridge: true },
+        { from: 2, to: 7, isBridge: true },
+        { from: 3, to: 9, isBridge: true },
+        { from: 5, to: 6 },
+        { from: 7, to: 8 },
+        { from: 9, to: 10 },
+        { from: 6, to: 8 },
+        { from: 8, to: 10 },
+      ],
+    },
+    {
+      id: 'bypass-router',
+      title: '통신 중계망과 비밀 우회선',
+      subtitle: '메인망 & 백도어 바이패스 (2-Cut 함정)',
+      badge: '⚡ 우회로 바이패스',
+      icon: 'bypass',
+      groupAName: '침투된 외부 네트워크망',
+      groupBName: '중앙 통신 코어 (보호 대상)',
+      patientZero: 0,
+      patientZeroLabel: '악성 트래픽 노드',
+      maxCuts: 2,
+      story: '외부에서 대규모 악성 트래픽이 유입 중입니다! 거대한 메인 통신선만 차단하면 방심하기 쉽지만, 야간 백업용 비밀 우회 광선로까지 찾아내어 2곳을 모두 차단해야 침투를 막을 수 있습니다.',
+      mathLesson: '눈에 띄는 주 통로를 차단하더라도 우회 경로(Bypass)가 남아있으면 바이러스나 패킷이 침투합니다. 그래프의 전체 통로를 추적하여 완전한 절단집합(Cut-set)을 구성해야 합니다.',
+      nodes: [
+        { id: 0, label: '외부 감염원', x: 90, y: 140, group: 'A' },
+        { id: 1, label: '외부 분배기', x: 90, y: 280, group: 'A' },
+        { id: 2, label: '메인 송출탑', x: 200, y: 130, group: 'A' },
+        { id: 3, label: '비상 우회스위치', x: 200, y: 300, group: 'A' },
+
+        { id: 4, label: '코어 라우터 (메인)', x: 380, y: 130, group: 'B' },
+        { id: 5, label: '인증 헤드엔드', x: 490, y: 90, group: 'B' },
+        { id: 6, label: '중앙 제어국', x: 490, y: 180, group: 'B' },
+        { id: 7, label: '보조 수신 허브', x: 380, y: 300, group: 'B' },
+        { id: 8, label: '클라우드 스토리지', x: 490, y: 290, group: 'B' },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 1, to: 3 },
+        { from: 2, to: 3 },
+        // 2 Bridges: Main and Bypass
+        { from: 2, to: 4, isBridge: true },
+        { from: 3, to: 7, isBridge: true },
+        { from: 4, to: 5 },
+        { from: 4, to: 6 },
+        { from: 5, to: 6 },
+        { from: 6, to: 8 },
+        { from: 7, to: 8 },
+      ],
+    },
+    {
+      id: 'smart-factory',
+      title: '스마트 팩토리 로봇 제어망',
+      subtitle: '생산라인 OT망 ↔ 클라우드 ERP 격리',
+      badge: '🏭 스마트 팩토리',
+      icon: 'factory',
+      groupAName: '공장 현장 로봇 설비 (웜 감염)',
+      groupBName: '본사 ERP & 설계 서버 (보호 대상)',
+      patientZero: 1,
+      patientZeroLabel: '용접 로봇 센서',
+      maxCuts: 2,
+      story: '공장 생산 라인의 자동 용접 로봇 센서에 산업용 웜코드가 감염되었습니다! 본사 클라우드 ERP 및 핵심 도면 서버로 연결되는 엣지 게이트웨이 포트 2곳을 차단하세요.',
+      mathLesson: '스마트 팩토리에서는 현장 운영망(OT)과 비즈니스망(IT)의 경계를 좁혀 통신망을 최소화하고 브릿지 방화벽으로 엄격히 감시하는 "제로 트러스트(Zero-Trust)" 모델을 적용합니다.',
+      nodes: [
+        { id: 0, label: '프레스 로봇', x: 100, y: 120, group: 'A' },
+        { id: 1, label: '용접 센서(감염)', x: 100, y: 260, group: 'A' },
+        { id: 2, label: '도장 로봇', x: 190, y: 100, group: 'A' },
+        { id: 3, label: '현장 게이트웨이 1', x: 210, y: 190, group: 'A' },
+        { id: 4, label: '현장 게이트웨이 2', x: 210, y: 300, group: 'A' },
+
+        { id: 5, label: '본사 보안 라우터', x: 380, y: 140, group: 'B' },
+        { id: 6, label: '클라우드 ERP', x: 490, y: 100, group: 'B' },
+        { id: 7, label: '핵심 설계 도면DB', x: 490, y: 200, group: 'B' },
+        { id: 8, label: '물류 자동화 관제', x: 380, y: 280, group: 'B' },
+        { id: 9, label: '원격 유지보수국', x: 480, y: 320, group: 'B' },
+      ],
+      edges: [
+        { from: 0, to: 1 },
+        { from: 0, to: 2 },
+        { from: 1, to: 3 },
+        { from: 1, to: 4 },
+        { from: 2, to: 3 },
+        { from: 3, to: 4 },
+        // OT to IT Bridges
+        { from: 3, to: 5, isBridge: true },
+        { from: 4, to: 8, isBridge: true },
+        { from: 5, to: 6 },
+        { from: 5, to: 7 },
+        { from: 6, to: 7 },
+        { from: 7, to: 8 },
+        { from: 8, to: 9 },
+      ],
+    },
   ];
 
   const [currentScenarioId, setCurrentScenarioId] = useState<string>('school');
@@ -362,6 +534,14 @@ export const BridgePuzzleTab: React.FC<{
         return <Server className="w-3.5 h-3.5 text-[#C084FC]" />;
       case 'plane':
         return <Plane className="w-3.5 h-3.5 text-[#7FC4EE]" />;
+      case 'bridge':
+        return <Landmark className="w-3.5 h-3.5 text-[#38bdf8]" />;
+      case 'fortress':
+        return <Building2 className="w-3.5 h-3.5 text-[#f59e0b]" />;
+      case 'bypass':
+        return <Zap className="w-3.5 h-3.5 text-[#e879f9]" />;
+      case 'factory':
+        return <Factory className="w-3.5 h-3.5 text-[#34d399]" />;
       default:
         return <School className="w-3.5 h-3.5 text-[#F2B84B]" />;
     }
@@ -377,7 +557,7 @@ export const BridgePuzzleTab: React.FC<{
           </h2>
           <p className="text-xs sm:text-sm text-[#7DBFB0] mt-1">
             "세상 사람들은 평균 6명만 거치면 모두 연결된다(작은 세상 네트워크)." 반대로,{' '}
-            <strong className="text-[#F2B84B]">서로 다른 두 집단을 잇는 좁은 '다리(Bridge)' 단 2개</strong>만 끊으면 바이러스 확산을 완벽히 봉쇄할 수 있습니다!
+            <strong className="text-[#F2B84B]">서로 다른 두 집단을 잇는 좁은 '다리(Bridge)' 소수의 연결선</strong>만 끊으면 바이러스 확산을 완벽히 봉쇄할 수 있습니다!
           </p>
         </div>
         {stageCleared && (
@@ -388,13 +568,18 @@ export const BridgePuzzleTab: React.FC<{
         )}
       </div>
 
-      {/* 5 Scenario Selector Pills */}
-      <div className="mb-4 bg-[#0A1A18] border border-[#234E47] rounded-xl p-2 shadow-sm">
-        <div className="text-[11px] font-bold text-[#EAFBF6] mb-1.5 px-1 flex items-center gap-1.5">
-          <Shield className="w-3.5 h-3.5 text-[#F2B84B]" />
-          <span>도전할 방화벽 시나리오 선택 (총 5개 예시):</span>
+      {/* Scenario Selector Pills */}
+      <div className="mb-4 bg-[#0A1A18] border border-[#234E47] rounded-xl p-2.5 shadow-sm">
+        <div className="text-[11px] font-bold text-[#EAFBF6] mb-2 px-1 flex items-center justify-between flex-wrap gap-1">
+          <div className="flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-[#F2B84B]" />
+            <span>도전할 방화벽 시나리오 선택 (총 9개 실전 예시 · 1-Cut, 2-Cut, 3-Cut 난이도별):</span>
+          </div>
+          <span className="text-[11px] text-[#F2B84B] font-mono">
+            {scenario.badge} · 최대 가위 차단: {scenario.maxCuts}회
+          </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1.5">
           {SCENARIOS.map((s) => {
             const isSelected = currentScenarioId === s.id;
             return (
@@ -409,7 +594,7 @@ export const BridgePuzzleTab: React.FC<{
               >
                 <div className="flex items-center gap-1">
                   {renderIcon(s.icon)}
-                  <span className="text-[10px] font-mono text-[#F2B84B] font-bold">{s.badge}</span>
+                  <span className="text-[10px] font-mono text-[#F2B84B] font-bold truncate">{s.badge}</span>
                 </div>
                 <div className={`text-xs font-bold mt-1 truncate ${isSelected ? 'text-[#EAFBF6]' : 'text-[#7DBFB0]'}`}>
                   {s.title}

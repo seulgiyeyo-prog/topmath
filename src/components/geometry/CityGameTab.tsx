@@ -137,6 +137,96 @@ export const CityGameTab: React.FC = () => {
       nodeNames: ['중앙 타워', '북쪽 기지', '동북 기지', '동남 기지', '서남 기지', '서북 기지'],
     },
     {
+      id: 'coastal-islands',
+      name: '남해 다도해 해상대교',
+      subtitle: '해안선 6대 도서 연륙교',
+      badge: '🏝️ 다도해 연륙교',
+      description: '목포에서 완도, 여수, 남해, 통영, 거제까지 이어지는 남해안 다도해의 해상 교량 연결망입니다.',
+      mstHint: '해안선을 따라 이웃한 섬끼리 차례로 연륙교를 잇는 선형 사슬 트리가 가장 짧고 경제적입니다.',
+      tspHint: '거제까지 배송한 뒤 출발지 목포로 되돌아올 때, 해저터널 직선로와 육로 우회로 중 어떤 폐루프가 최단인지 찾아보세요.',
+      points: [
+        { x: 100, y: 300 }, // 목포
+        { x: 190, y: 340 }, // 완도
+        { x: 300, y: 310 }, // 여수
+        { x: 380, y: 260 }, // 남해
+        { x: 460, y: 230 }, // 통영
+        { x: 530, y: 170 }, // 거제
+      ],
+      nodeNames: ['목포', '완도', '여수', '남해', '통영', '거제'],
+    },
+    {
+      id: 'nested-triangles',
+      name: '이중 삼각형 기하 타워',
+      subtitle: '외곽 대형망 & 내부 역삼각',
+      badge: '📐 이중 삼각형',
+      description: '외곽의 거대한 정삼각형 3대 타워와, 그 안쪽에 거꾸로 뒤집힌 내부 3개 기지국으로 구성된 기하 대칭 망입니다.',
+      mstHint: '외곽 정점에서 가장 가까운 내부 거점으로 뻗고, 내부 역삼각형을 잇는 Y자형 분기 트리를 찾아보세요.',
+      tspHint: '외곽과 내부를 교대로 번갈아가며 지그재그 별 모양 톱니 순환을 만들면 선 교차 없이 최단 폐곡선이 나옵니다.',
+      points: [
+        { x: 300, y: 60 },  // 북부 정점 타워
+        { x: 480, y: 330 }, // 동남 정점 타워
+        { x: 120, y: 330 }, // 서남 정점 타워
+        { x: 230, y: 195 }, // 내부 서북 기지
+        { x: 370, y: 195 }, // 내부 동북 기지
+        { x: 300, y: 285 }, // 내부 중앙 기지
+      ],
+      nodeNames: ['북부 타워', '동남 타워', '서남 타워', '내부 서북', '내부 동북', '내부 중앙'],
+    },
+    {
+      id: 'river-banks',
+      name: '한강 양안 6대 거점',
+      subtitle: '강북 3구 vs 강남 3구 횡단',
+      badge: '🌊 강남·강북 양안',
+      description: '도심을 가로지르는 큰 강을 사이에 두고 강북 3곳과 강남 3곳의 주요 거점이 마주보고 있습니다.',
+      mstHint: '💡 MST의 핵심: 강을 건너는 한강 교량은 단 1개만 건설하면 전체가 연결됩니다! 강북 내·강남 내 직선이 우선입니다.',
+      tspHint: '💡 TSP의 핵심: 순환 왕복해야 하므로 강을 건너는 다리가 반드시 최소 2개(동쪽 1개, 서쪽 1개) 필요합니다!',
+      points: [
+        { x: 150, y: 130 }, // 마포 (강북서)
+        { x: 300, y: 120 }, // 용산 (강북중)
+        { x: 450, y: 140 }, // 성동 (강북동)
+        { x: 170, y: 290 }, // 여의도 (강남서)
+        { x: 320, y: 280 }, // 서초 (강남중)
+        { x: 470, y: 290 }, // 강남 (강남동)
+      ],
+      nodeNames: ['마포 (강북서)', '용산 (강북중)', '성동 (강북동)', '여의도 (강남서)', '서초 (강남중)', '강남 (강남동)'],
+    },
+    {
+      id: 'interchange-clover',
+      name: '입체 클로버 인터체인지',
+      subtitle: '중심 환승 2거점 & 4개 IC',
+      badge: '🚦 입체 나들목',
+      description: '중앙의 서부·동부 복합 환승센터 2곳과 사방 모퉁이의 고속도로 나들목(IC) 4곳이 연결되는 물류 분기망입니다.',
+      mstHint: '중심 환승센터 두 곳을 먼저 잇고, 각 센터에서 인접한 두 나들목으로 Y자형 갈래를 뻗는 수형도를 만드세요.',
+      tspHint: '네 모퉁이 나들목을 감싸며 사각형 링을 돌지, 환승센터를 거쳐 8자형 모양으로 왕복할지 총거리를 비교해보세요.',
+      points: [
+        { x: 240, y: 210 }, // 서부 환승센터
+        { x: 360, y: 210 }, // 동부 환승센터
+        { x: 130, y: 90 },  // 북서 IC
+        { x: 470, y: 90 },  // 북동 IC
+        { x: 470, y: 330 }, // 남동 IC
+        { x: 130, y: 330 }, // 남서 IC
+      ],
+      nodeNames: ['서부 환승센터', '동부 환승센터', '북서 IC', '북동 IC', '남동 IC', '남서 IC'],
+    },
+    {
+      id: 'zigzag-valley',
+      name: '백두대간 협곡 지그재그',
+      subtitle: '험준한 산악 도로와 터널망',
+      badge: '⛰️ 산악 협곡',
+      description: '높은 산줄기와 깊은 골짜기가 번갈아 이어지는 W자 지형의 산악 마을 6곳입니다.',
+      mstHint: 'W자형으로 요동치는 지형에서 멀리 떨어진 봉우리를 무리하게 잇지 말고 이웃한 고갯길을 순서대로 연결하세요.',
+      tspHint: '골짜기를 따라 왕복할 때 한 번 거친 험로를 되돌아가지 않고 능선을 크게 감싸 도는 순환로를 완성하세요.',
+      points: [
+        { x: 90, y: 110 },  // 협곡 입구
+        { x: 190, y: 290 }, // 1차 고개
+        { x: 290, y: 120 }, // 중앙 능선
+        { x: 380, y: 300 }, // 산악 쉼터
+        { x: 460, y: 130 }, // 고원 분지
+        { x: 530, y: 290 }, // 협곡 출구
+      ],
+      nodeNames: ['협곡 입구', '1차 고개', '중앙 능선', '산악 쉼터', '고원 분지', '협곡 출구'],
+    },
+    {
       id: 'random',
       name: '무작위 5개 도시 탐험',
       subtitle: '매번 새로운 난수 생성',
@@ -471,13 +561,18 @@ export const CityGameTab: React.FC = () => {
         </div>
       </div>
 
-      {/* 5+1 Map Preset Selector Bar */}
+      {/* 10+1 Map Preset Selector Bar */}
       <div className="mb-4 bg-[#102B47] border border-[#2C567F] rounded-xl p-2.5 shadow-sm">
-        <div className="flex items-center gap-2 mb-2 px-1">
-          <MapPin className="w-3.5 h-3.5 text-[#E7A93D]" />
-          <span className="text-xs font-bold text-[#EAF3FC]">도전할 맵 시나리오 선택 (총 6종):</span>
+        <div className="flex items-center justify-between gap-2 mb-2 px-1 flex-wrap">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-3.5 h-3.5 text-[#E7A93D]" />
+            <span className="text-xs font-bold text-[#EAF3FC]">도전할 맵 시나리오 선택 (총 11종 · 5종 신규 탑재):</span>
+          </div>
+          <span className="text-[11px] text-[#6FCF97] font-mono">
+            {currentMap.badge} · {currentMap.name} 선택됨
+          </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
           {MAP_PRESETS.map((p) => {
             const isSelected = selectedMapId === p.id;
             return (
@@ -491,7 +586,7 @@ export const CityGameTab: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#E7A93D] font-mono font-bold">
+                  <span className="text-[10px] text-[#E7A93D] font-mono font-bold truncate">
                     {p.badge}
                   </span>
                 </div>
@@ -528,6 +623,50 @@ export const CityGameTab: React.FC = () => {
                 <line x1={390} y1={0} x2={390} y2={420} stroke="#7FC4EE" strokeDasharray="6 4" strokeWidth={1.5} />
                 <text x={315} y={210} fill="#7FC4EE" fontSize={12} fontWeight={700} textAnchor="middle" transform="rotate(-90 315 210)">
                   🌊 바다 해협 (연결 다리 필요)
+                </text>
+              </g>
+            )}
+
+            {/* Special Environment: Han River for River Banks Map */}
+            {selectedMapId === 'river-banks' && (
+              <g opacity={0.4}>
+                <rect x={0} y={180} width={600} height={65} fill="#0d416b" />
+                <line x1={0} y1={180} x2={600} y2={180} stroke="#38bdf8" strokeDasharray="8 5" strokeWidth={1.5} />
+                <line x1={0} y1={245} x2={600} y2={245} stroke="#38bdf8" strokeDasharray="8 5" strokeWidth={1.5} />
+                <text x={300} y={217} fill="#7FC4EE" fontSize={13} fontWeight={700} textAnchor="middle">
+                  🌊 한강 본류 (강북 ↔ 강남 횡단 교량 건설 지대)
+                </text>
+              </g>
+            )}
+
+            {/* Special Environment: Coastal Islands Map */}
+            {selectedMapId === 'coastal-islands' && (
+              <g opacity={0.3}>
+                <path d="M 0 240 Q 200 210 400 180 T 600 130 L 600 420 L 0 420 Z" fill="#082f49" />
+                <text x={480} y={380} fill="#38bdf8" fontSize={12} fontWeight={700}>
+                  🌊 남해 청정 해역 (연륙교 설치 구역)
+                </text>
+              </g>
+            )}
+
+            {/* Special Environment: Highway Interchange Map */}
+            {selectedMapId === 'interchange-clover' && (
+              <g opacity={0.25}>
+                <line x1={50} y1={210} x2={550} y2={210} stroke="#94a3b8" strokeWidth={18} />
+                <line x1={300} y1={40} x2={300} y2={380} stroke="#94a3b8" strokeWidth={18} />
+                <line x1={50} y1={210} x2={550} y2={210} stroke="#facc15" strokeDasharray="10 8" strokeWidth={2} />
+                <line x1={300} y1={40} x2={300} y2={380} stroke="#facc15" strokeDasharray="10 8" strokeWidth={2} />
+              </g>
+            )}
+
+            {/* Special Environment: Zigzag Mountain Valley Map */}
+            {selectedMapId === 'zigzag-valley' && (
+              <g opacity={0.25}>
+                <polygon points="50,400 140,200 230,400" fill="#14532d" />
+                <polygon points="190,400 290,160 390,400" fill="#166534" />
+                <polygon points="350,400 460,170 570,400" fill="#14532d" />
+                <text x={300} y={390} fill="#86efac" fontSize={12} fontWeight={700} textAnchor="middle">
+                  ⛰️ 험준한 산악 능선 & 협곡 도로
                 </text>
               </g>
             )}

@@ -21,6 +21,7 @@ interface DiffusionLabProps {
   onLaunchConfetti: () => void;
   onGoHome: () => void;
   onSwitchToGeometry: () => void;
+  onOpenWorkbook?: () => void;
 }
 
 export const DiffusionLab: React.FC<DiffusionLabProps> = ({
@@ -31,6 +32,7 @@ export const DiffusionLab: React.FC<DiffusionLabProps> = ({
   onLaunchConfetti,
   onGoHome,
   onSwitchToGeometry,
+  onOpenWorkbook,
 }) => {
   const [activeTab, setActiveTab] = useState<MissionKey>('herd');
   const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
@@ -123,6 +125,17 @@ export const DiffusionLab: React.FC<DiffusionLabProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenWorkbook && (
+              <button
+                onClick={onOpenWorkbook}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
+                title="수업용 교재 정답 및 해설 워크북 열기"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>교재 정답 & 워크북</span>
+              </button>
+            )}
+
             <button
               onClick={onSwitchToGeometry}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1A3D37] hover:bg-[#234E47] text-[#F2B84B] text-xs font-semibold transition-colors cursor-pointer"

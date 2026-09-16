@@ -1,0 +1,1521 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { MathView } from '../MathView';
+import {
+  GraduationCap,
+  Shapes,
+  Network,
+  Lightbulb,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  Route,
+  TriangleAlert,
+  ShieldAlert,
+  ShieldCheck,
+  TrendingUp,
+  Home,
+  Compass,
+  Share2,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  ArrowRight,
+  Hand
+} from 'lucide-react';
+
+interface WorkbookPageProps {
+  onGoHome: () => void;
+  onSwitchToGeometry: () => void;
+  onSwitchToDiffusion: () => void;
+}
+
+export const WorkbookPage: React.FC<WorkbookPageProps> = ({
+  onGoHome,
+  onSwitchToGeometry,
+  onSwitchToDiffusion,
+}) => {
+  const [activeSection, setActiveSection] = useState<'t1' | 't2'>('t1');
+
+  // Toggle states for all answer/explanation cards
+  const [showAllAnswers, setShowAllAnswers] = useState(false);
+  const [ansHeron, setAnsHeron] = useState(false);
+  const [ansFermatQ, setAnsFermatQ] = useState(false);
+  const [ansNetMat, setAnsNetMat] = useState(false);
+  const [ansRumor, setAnsRumor] = useState(false);
+  const [ansR0Table, setAnsR0Table] = useState(false);
+  const [ansVaccineHub, setAnsVaccineHub] = useState(false);
+  const [ansMath26, setAnsMath26] = useState(false);
+
+  // Toggle all answers at once
+  const handleToggleAllAnswers = () => {
+    const nextState = !showAllAnswers;
+    setShowAllAnswers(nextState);
+    setAnsHeron(nextState);
+    setAnsFermatQ(nextState);
+    setAnsNetMat(nextState);
+    setAnsRumor(nextState);
+    setAnsR0Table(nextState);
+    setAnsVaccineHub(nextState);
+    setAnsMath26(nextState);
+  };
+
+  // =========================================================================
+  // 1. HERON CANVAS STATE
+  // =========================================================================
+  const heronCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [heronPXRatio, setHeronPXRatio] = useState(0.45);
+  const isDraggingHeronRef = useRef(false);
+  const [heronStats, setHeronStats] = useState({ cur: 0, min: 0, isOpt: false });
+
+  const drawHeron = useCallback(() => {
+    const canvas = heronCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+
+    const width = rect.width;
+    const height = rect.height;
+    ctx.clearRect(0, 0, width, height);
+
+    const riverY = height * 0.58;
+    const ptA = { x: width * 0.18, y: height * 0.22 };
+    const ptB = { x: width * 0.82, y: height * 0.28 };
+    const ptBPrime = { x: ptB.x, y: riverY + (riverY - ptB.y) };
+    const ptP = { x: width * heronPXRatio, y: riverY };
+
+    const optPX = ptA.x + (ptBPrime.x - ptA.x) * ((riverY - ptA.y) / (ptBPrime.y - ptA.y));
+
+    // River background
+    ctx.fillStyle = '#e0f2fe';
+    ctx.fillRect(0, riverY - 5, width, 10);
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(0, riverY);
+    ctx.lineTo(width, riverY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#0369a1';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('강변 (반사축)', 12, riverY - 10);
+
+    // Symmetry line (B - B')
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(ptB.x, ptB.y);
+    ctx.lineTo(ptBPrime.x, ptBPrime.y);
+    ctx.stroke();
+
+    // Optimal line (A - B')
+    ctx.strokeStyle = '#16a34a';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(ptA.x, ptA.y);
+    ctx.lineTo(ptBPrime.x, ptBPrime.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Current path (A -> P -> B)
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(ptA.x, ptA.y);
+    ctx.lineTo(ptP.x, ptP.y);
+    ctx.lineTo(ptB.x, ptB.y);
+    ctx.stroke();
+
+    // P -> B' virtual line
+    ctx.strokeStyle = '#60a5fa';
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(ptP.x, ptP.y);
+    ctx.lineTo(ptBPrime.x, ptBPrime.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw Points
+    const drawPt = (p: { x: number; y: number }, color: string, label: string, dy = -12) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(label, p.x - 10, p.y + dy);
+    };
+
+    drawPt(ptA, '#1e293b', 'A');
+    drawPt(ptB, '#1e293b', 'B');
+    drawPt(ptBPrime, '#64748b', "B'", 20);
+    drawPt(ptP, '#f97316', 'P (물 뜨는 곳)', -14);
+
+    const distCur = Math.hypot(ptA.x - ptP.x, ptA.y - ptP.y) + Math.hypot(ptB.x - ptP.x, ptB.y - ptP.y);
+    const distMin = Math.hypot(ptA.x - ptBPrime.x, ptA.y - ptBPrime.y);
+    const isOptimal = Math.abs(ptP.x - optPX) < 3.5;
+
+    setHeronStats({ cur: distCur, min: distMin, isOpt: isOptimal });
+  }, [heronPXRatio]);
+
+  // =========================================================================
+  // 2. FERMAT CANVAS STATE
+  // =========================================================================
+  const fermatCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [fermatHeight, setFermatHeight] = useState(380);
+  const [fermatZoom, setFermatZoom] = useState(0.75);
+  const [fermatMaxAngle, setFermatMaxAngle] = useState<number>(60);
+
+  const defaultFermatPoints = [
+    { rx: 0.0, ry: -0.38, name: 'A' },
+    { rx: -0.32, ry: 0.32, name: 'B' },
+    { rx: 0.32, ry: 0.32, name: 'C' }
+  ];
+  const [fPoints, setFPoints] = useState(defaultFermatPoints);
+  const dragFermatIdxRef = useRef(-1);
+
+  const resetFermatPositions = () => {
+    setFPoints([
+      { rx: 0.0, ry: -0.38, name: 'A' },
+      { rx: -0.32, ry: 0.32, name: 'B' },
+      { rx: 0.32, ry: 0.32, name: 'C' }
+    ]);
+  };
+
+  const getAngleDeg = (p1: { x: number; y: number }, p2: { x: number; y: number }, p3: { x: number; y: number }) => {
+    const a = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    const b = Math.hypot(p3.x - p2.x, p3.y - p2.y);
+    const c = Math.hypot(p1.x - p3.x, p1.y - p3.y);
+    const cosV = (a * a + b * b - c * c) / (2 * a * b);
+    return Math.acos(Math.max(-1, Math.min(1, cosV))) * (180 / Math.PI);
+  };
+
+  const getExtEquilateral = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const ang = -Math.PI / 3;
+    return {
+      x: p1.x + (dx * Math.cos(ang) - dy * Math.sin(ang)),
+      y: p1.y + (dx * Math.sin(ang) + dy * Math.cos(ang))
+    };
+  };
+
+  const getLineIntersect = (
+    p1: { x: number; y: number },
+    p2: { x: number; y: number },
+    p3: { x: number; y: number },
+    p4: { x: number; y: number }
+  ) => {
+    const denom = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+    if (Math.abs(denom) < 1e-6) return null;
+    const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / denom;
+    return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+  };
+
+  const drawFermat = useCallback(() => {
+    const canvas = fermatCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+
+    const width = rect.width;
+    const height = rect.height;
+    ctx.clearRect(0, 0, width, height);
+
+    const cx = width / 2;
+    const cy = height / 2;
+    const baseDim = Math.min(width, height);
+
+    const pts = fPoints.map((p) => ({
+      x: cx + p.rx * baseDim * fermatZoom,
+      y: cy + p.ry * baseDim * fermatZoom,
+      name: p.name,
+    }));
+    const [A, B, C] = pts;
+
+    const angA = getAngleDeg(B, A, C);
+    const angB = getAngleDeg(A, B, C);
+    const angC = getAngleDeg(A, C, B);
+    const maxAng = Math.max(angA, angB, angC);
+    setFermatMaxAngle(maxAng);
+
+    // External equilateral triangles construction lines
+    const extBC = getExtEquilateral(B, C);
+    const extCA = getExtEquilateral(C, A);
+    const extAB = getExtEquilateral(A, B);
+
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 3]);
+    [[B, extBC, C], [C, extCA, A], [A, extAB, B]].forEach(([p1, p2, p3]) => {
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Triangle ABC body
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(A.x, A.y);
+    ctx.lineTo(B.x, B.y);
+    ctx.lineTo(C.x, C.y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(241, 245, 249, 0.7)';
+    ctx.fill();
+    ctx.stroke();
+
+    // Determine Fermat point
+    let fermatP: { x: number; y: number } | null = null;
+    if (angA >= 120) fermatP = A;
+    else if (angB >= 120) fermatP = B;
+    else if (angC >= 120) fermatP = C;
+    else {
+      fermatP = getLineIntersect(A, extBC, B, extCA) || {
+        x: (A.x + B.x + C.x) / 3,
+        y: (A.y + B.y + C.y) / 3,
+      };
+    }
+
+    // Connect Fermat point
+    if (fermatP) {
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      [A, B, C].forEach((pt) => {
+        ctx.beginPath();
+        ctx.moveTo(fermatP!.x, fermatP!.y);
+        ctx.lineTo(pt.x, pt.y);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.arc(fermatP.x, fermatP.y, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#991b1b';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('P (페르마 점)', fermatP.x + 9, fermatP.y - 7);
+    }
+
+    // Draw vertices A, B, C
+    pts.forEach((p) => {
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 8.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText(p.name, p.x - 14, p.y - 12);
+    });
+  }, [fPoints, fermatZoom]);
+
+  // =========================================================================
+  // 3. GRAPH CANVAS STATE (4-node adjacency matrix)
+  // =========================================================================
+  const graphCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [netNodes, setNetNodes] = useState([
+    { id: 'A', rx: 0.25, ry: 0.25, deg: 2 },
+    { id: 'B', rx: 0.75, ry: 0.25, deg: 3 },
+    { id: 'C', rx: 0.25, ry: 0.75, deg: 3 },
+    { id: 'D', rx: 0.75, ry: 0.75, deg: 2 },
+  ]);
+  const netEdges = [
+    ['A', 'B'],
+    ['A', 'C'],
+    ['B', 'C'],
+    ['B', 'D'],
+    ['C', 'D'],
+  ];
+  const dragNetIdxRef = useRef(-1);
+
+  const drawNetGraph = useCallback(() => {
+    const canvas = graphCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+
+    const width = rect.width;
+    const height = rect.height;
+    ctx.clearRect(0, 0, width, height);
+
+    // Edges
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 3;
+    netEdges.forEach(([u, v]) => {
+      const p1 = netNodes.find((n) => n.id === u);
+      const p2 = netNodes.find((n) => n.id === v);
+      if (!p1 || !p2) return;
+      ctx.beginPath();
+      ctx.moveTo(p1.rx * width, p1.ry * height);
+      ctx.lineTo(p2.rx * width, p2.ry * height);
+      ctx.stroke();
+    });
+
+    // Nodes
+    netNodes.forEach((node) => {
+      const x = node.rx * width;
+      const y = node.ry * height;
+
+      ctx.fillStyle = '#4f46e5';
+      ctx.beginPath();
+      ctx.arc(x, y, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.id, x, y);
+
+      // Degree Badge
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath();
+      ctx.arc(x + 13, y - 13, 9.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText(node.deg.toString(), x + 13, y - 13);
+    });
+    ctx.textAlign = 'left';
+  }, [netNodes]);
+
+  // =========================================================================
+  // 4. R0 SIMULATION CHART STATE
+  // =========================================================================
+  const r0CanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [sliderR0A, setSliderR0A] = useState(3.0);
+  const [sliderR0B, setSliderR0B] = useState(0.8);
+
+  const drawR0Chart = useCallback(() => {
+    const canvas = r0CanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+
+    const width = rect.width;
+    const height = rect.height;
+    ctx.clearRect(0, 0, width, height);
+
+    const padLeft = 45;
+    const padRight = 20;
+    const padTop = 30;
+    const padBottom = 35;
+    const plotW = width - padLeft - padRight;
+    const plotH = height - padTop - padBottom;
+
+    const steps = [0, 1, 2, 3, 4, 5];
+    const dataA = steps.map((i) => Math.pow(sliderR0A, i));
+    const dataB = steps.map((i) => Math.pow(sliderR0B, i));
+
+    const maxVal = Math.max(260, ...dataA, ...dataB);
+
+    // Axes & grid lines
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    for (let g = 0; g <= 5; g++) {
+      const gy = padTop + (plotH / 5) * g;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, gy);
+      ctx.lineTo(padLeft + plotW, gy);
+      ctx.stroke();
+
+      const labelVal = Math.round(maxVal - (maxVal / 5) * g);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(labelVal.toString(), padLeft - 6, gy + 3);
+    }
+
+    // X-axis labels
+    ctx.textAlign = 'center';
+    steps.forEach((st, i) => {
+      const gx = padLeft + (plotW / 5) * i;
+      ctx.fillText(`${st}단계`, gx, padTop + plotH + 18);
+    });
+
+    // Medical capacity line (50)
+    const capY = padTop + plotH - (50 / maxVal) * plotH;
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(padLeft, capY);
+    ctx.lineTo(padLeft + plotW, capY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#dc2626';
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillText('의료 수용 한계선 (50명)', padLeft + plotW - 8, capY - 6);
+
+    // Draw Line helper
+    const drawLine = (data: number[], strokeColor: string, fillColor: string) => {
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      data.forEach((val, i) => {
+        const x = padLeft + (plotW / 5) * i;
+        const y = padTop + plotH - (val / maxVal) * plotH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // fill gradient under curve
+      ctx.lineTo(padLeft + plotW, padTop + plotH);
+      ctx.lineTo(padLeft, padTop + plotH);
+      ctx.closePath();
+      ctx.fillStyle = fillColor;
+      ctx.fill();
+
+      // Points
+      data.forEach((val, i) => {
+        const x = padLeft + (plotW / 5) * i;
+        const y = padTop + plotH - (val / maxVal) * plotH;
+        ctx.fillStyle = strokeColor;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    };
+
+    // Draw Situation B (Blue)
+    drawLine(dataB, '#2563eb', 'rgba(37, 99, 235, 0.08)');
+    // Draw Situation A (Red)
+    drawLine(dataA, '#ef4444', 'rgba(239, 68, 68, 0.12)');
+
+    // Legend
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText(`■ 상황 A (R₀ = ${sliderR0A.toFixed(1)})`, padLeft + 10, padTop - 10);
+    ctx.fillStyle = '#2563eb';
+    ctx.fillText(`■ 상황 B (R₀ = ${sliderR0B.toFixed(2)})`, padLeft + 160, padTop - 10);
+  }, [sliderR0A, sliderR0B]);
+
+  // =========================================================================
+  // 5. SIR PREDICTION SIMULATION CHART STATE
+  // =========================================================================
+  const sirCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [sirMode, setSirMode] = useState<'before' | 'after'>('before');
+
+  const simulateSIR = (N: number, I0: number, beta: number, gamma: number, days: number) => {
+    let S = N - I0;
+    let I = I0;
+    let R = 0;
+    const dt = 0.5;
+    const stepsPerDay = 1 / dt;
+    const resS = [S], resI = [I], resR = [R];
+
+    for (let d = 1; d <= days; d++) {
+      for (let s = 0; s < stepsPerDay; s++) {
+        const dS = -((beta * S * I) / N) * dt;
+        const dI = ((beta * S * I) / N - gamma * I) * dt;
+        const dR = gamma * I * dt;
+        S += dS;
+        I += dI;
+        R += dR;
+      }
+      resS.push(Math.round(S));
+      resI.push(Math.round(I));
+      resR.push(Math.round(R));
+    }
+    return { S: resS, I: resI, R: resR };
+  };
+
+  const drawSirChart = useCallback(() => {
+    const canvas = sirCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+
+    const width = rect.width;
+    const height = rect.height;
+    ctx.clearRect(0, 0, width, height);
+
+    const days = 60;
+    const sim =
+      sirMode === 'before'
+        ? simulateSIR(1000, 1, 0.4, 0.1, days)
+        : simulateSIR(1000, 1, 0.08, 0.1, days);
+
+    const padLeft = 45;
+    const padRight = 20;
+    const padTop = 30;
+    const padBottom = 35;
+    const plotW = width - padLeft - padRight;
+    const plotH = height - padTop - padBottom;
+    const maxVal = 1000;
+
+    // Grid lines
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    for (let g = 0; g <= 5; g++) {
+      const gy = padTop + (plotH / 5) * g;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, gy);
+      ctx.lineTo(padLeft + plotW, gy);
+      ctx.stroke();
+
+      const labelVal = Math.round(maxVal - (maxVal / 5) * g);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(labelVal.toString(), padLeft - 6, gy + 3);
+    }
+
+    // X-axis days
+    ctx.textAlign = 'center';
+    [0, 10, 20, 30, 40, 50, 60].forEach((d) => {
+      const gx = padLeft + (plotW / 60) * d;
+      ctx.fillText(`${d}일`, gx, padTop + plotH + 18);
+    });
+
+    // Hospital capacity (200)
+    const capY = padTop + plotH - (200 / maxVal) * plotH;
+    ctx.strokeStyle = '#b91c1c';
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(padLeft, capY);
+    ctx.lineTo(padLeft + plotW, capY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#b91c1c';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('의료 수용 한계선 (200명)', padLeft + plotW - 8, capY - 6);
+
+    const drawCurve = (data: number[], color: string, fill = false, fillColor = '') => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      data.forEach((val, i) => {
+        const x = padLeft + (plotW / days) * i;
+        const y = padTop + plotH - (val / maxVal) * plotH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      if (fill) {
+        ctx.lineTo(padLeft + plotW, padTop + plotH);
+        ctx.lineTo(padLeft, padTop + plotH);
+        ctx.closePath();
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+      }
+    };
+
+    // Draw S (Blue)
+    drawCurve(sim.S, '#3b82f6');
+    // Draw R (Green)
+    drawCurve(sim.R, '#10b981');
+    // Draw I (Red) with fill
+    drawCurve(sim.I, '#ef4444', true, 'rgba(239, 68, 68, 0.15)');
+
+    // Legend
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('■ I (감염자)', padLeft + 10, padTop - 10);
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillText('■ S (감수성자)', padLeft + 110, padTop - 10);
+    ctx.fillStyle = '#10b981';
+    ctx.fillText('■ R (회복·면역자)', padLeft + 220, padTop - 10);
+  }, [sirMode]);
+
+  // Initial draw & resize listeners
+  useEffect(() => {
+    drawHeron();
+    drawFermat();
+    drawNetGraph();
+    drawR0Chart();
+    drawSirChart();
+
+    const handleResize = () => {
+      drawHeron();
+      drawFermat();
+      drawNetGraph();
+      drawR0Chart();
+      drawSirChart();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [drawHeron, drawFermat, drawNetGraph, drawR0Chart, drawSirChart]);
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col selection:bg-blue-600 selection:text-white">
+      {/* Top Universal Classroom Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="bg-blue-600 text-white p-2.5 rounded-xl shadow-sm">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-mono">
+                  2026 중등영재 수학
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
+                  교재 정답 & 인터랙티브 수업 플랫폼
+                </span>
+              </div>
+              <h1 className="text-lg font-bold text-slate-900 leading-tight">
+                기하 최적화 & 감염병 확산 모델링 워크북
+              </h1>
+            </div>
+          </div>
+
+          {/* Controls: Home, Lab Switches, Section Tabs, Master Answer Toggle */}
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-end">
+            <button
+              onClick={onGoHome}
+              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span>포털 홈</span>
+            </button>
+
+            <button
+              onClick={handleToggleAllAnswers}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-sm ${
+                showAllAnswers
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+              }`}
+              title="수업 시 모든 문제의 정답과 해설을 한 번에 열거나 닫습니다"
+            >
+              {showAllAnswers ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              <span>{showAllAnswers ? '정답 전체 닫기' : '교재 정답 전체 보기'}</span>
+            </button>
+
+            {/* Section Switcher Tabs */}
+            <div className="flex bg-slate-100 p-1 rounded-xl">
+              <button
+                onClick={() => setActiveSection('t1')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeSection === 't1'
+                    ? 'bg-blue-600 text-white font-bold shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Shapes className="w-4 h-4" />
+                <span>1. 기하 최적화와 페르마 점</span>
+              </button>
+
+              <button
+                onClick={() => setActiveSection('t2')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeSection === 't2'
+                    ? 'bg-blue-600 text-white font-bold shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Network className="w-4 h-4" />
+                <span>2. 확산과 네트워크 모델링</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 space-y-6">
+
+        {/* Quick Course Transfer Floating Banner */}
+        <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-3.5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm">
+            <span className="text-xl">💡</span>
+            <span>
+              <strong>선생님 수업 가이드:</strong> 워크북의 문제별 <strong>[정답 및 해설]</strong> 버튼을 누르면 풀이가 즉시 펼쳐집니다. 시뮬레이션 게임 본편으로 이동하려면 우측 버튼을 누르세요.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={onSwitchToGeometry}
+              className="px-3 py-1.5 rounded-lg bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1"
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span>기하 랩 본편</span>
+            </button>
+            <button
+              onClick={onSwitchToDiffusion}
+              className="px-3 py-1.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>확산 랩 본편</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ================================================================= */}
+        {/* [SECTION 1] 기하 최적화와 페르마 점                                */}
+        {/* ================================================================= */}
+        {activeSection === 't1' && (
+          <div className="space-y-6">
+            {/* 1. 헤론의 최단거리 */}
+            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+              <div className="flex items-center justify-between border-b pb-3 mb-4 flex-wrap gap-2">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="w-7 h-7 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-sm font-bold">
+                    1
+                  </span>
+                  헤론의 최단 거리 문제와 대칭의 원리
+                </h2>
+                <button
+                  onClick={() => setAnsHeron(!ansHeron)}
+                  className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-lg border border-blue-200 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  <span>{ansHeron ? '정답 접기' : '정답 및 해설'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                <div className="lg:col-span-6 space-y-3">
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm leading-relaxed">
+                    <strong className="text-slate-800">Q. 왜 직선 거리가 최단 거리가 될까?</strong>
+                    <br />
+                    <span className="text-slate-600">
+                      '삼각형의 결정 조건(삼각 부등식)'을 이용하여 설명해 보세요.
+                    </span>
+                  </div>
+
+                  {ansHeron && (
+                    <div className="p-4 bg-blue-50 border-l-4 border-blue-600 rounded-r-xl text-xs sm:text-sm text-slate-700 space-y-2 animate-fadeIn">
+                      <p className="font-bold text-blue-900">💡 수학적 증명 해설</p>
+                      <p>
+                        1. 강변 직선을 기준으로 점 <MathView tex="B" />를 대칭이동시킨 점을 <MathView tex="B'" />이라 하면, 선대칭 성질에 의해 강변의 임의의 점 <MathView tex="P" />에 대해 <MathView tex="PB = PB'" />입니다.
+                      </p>
+                      <p>
+                        2. 따라서 전체 이동 거리는 <MathView tex="AP + PB = AP + PB'" />이 됩니다.
+                      </p>
+                      <p>
+                        3. 점 <MathView tex="P" />가 선분 <MathView tex="AB'" /> 위에 있지 않다면 삼각형 <MathView tex="APB'" />이 만들어집니다. <strong>삼각형의 결정 조건(삼각 부등식)</strong>에 따라 두 변의 길이의 합은 다른 한 변보다 항상 깁니다 (<MathView tex="AP + PB' > AB'" />).
+                      </p>
+                      <p>
+                        4. 따라서 세 점 <MathView tex="A, P, B'" />이 일직선상에 존재할 때 거리의 합이 최소(<MathView tex="AB'" />)가 됩니다.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* 헤론 캔버스 */}
+                <div className="lg:col-span-6 bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <p className="text-xs text-slate-500 mb-2 font-medium flex items-center gap-1">
+                    <Hand className="w-3.5 h-3.5 text-blue-600" />
+                    <span>강변 위의 주황색 점 <MathView tex="P" />를 마우스나 손가락으로 드래그하여 거리 변화를 관찰하세요.</span>
+                  </p>
+                  <div
+                    className="w-full bg-white rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] relative touch-none cursor-ew-resize"
+                    onPointerDown={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = e.clientX - rect.left;
+                      const curX = rect.width * heronPXRatio;
+                      if (Math.abs(x - curX) < 40) isDraggingHeronRef.current = true;
+                    }}
+                    onPointerMove={(e) => {
+                      if (!isDraggingHeronRef.current) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = Math.max(20, Math.min(rect.width - 20, e.clientX - rect.left));
+                      setHeronPXRatio(x / rect.width);
+                    }}
+                    onPointerUp={() => {
+                      isDraggingHeronRef.current = false;
+                    }}
+                  >
+                    <canvas ref={heronCanvasRef} className="w-full h-full block" />
+                  </div>
+                  <div className="mt-2 text-center text-xs font-semibold text-slate-700">
+                    현재 경로 <MathView tex="AP + PB" />: <span className={`font-mono ${heronStats.isOpt ? 'text-emerald-600 font-bold' : 'text-blue-600'}`}>{heronStats.cur.toFixed(1)}</span> px 
+                    | 최단 직선 거리 <MathView tex="AB'" />: <span className="font-mono text-emerald-600 font-bold">{heronStats.min.toFixed(1)}</span> px 
+                    {heronStats.isOpt && <span className="text-emerald-600 ml-1 font-bold">✨ (최적 상태 달성!)</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. 페르마 점 작도기 (크기 조절 & 줌 컨트롤) */}
+            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+              <div className="flex flex-wrap items-center justify-between border-b pb-3 mb-4 gap-2">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="w-7 h-7 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-sm font-bold">
+                    2
+                  </span>
+                  페르마 점 (Fermat Point) 인터랙티브 작도기
+                </h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* 캔버스 높이 조절 버튼 */}
+                  <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
+                    <button
+                      onClick={() => setFermatHeight(340)}
+                      className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+                        fermatHeight === 340 ? 'bg-white font-bold text-blue-600 shadow-xs' : 'text-slate-600 hover:bg-white'
+                      }`}
+                    >
+                      기본
+                    </button>
+                    <button
+                      onClick={() => setFermatHeight(480)}
+                      className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+                        fermatHeight === 480 ? 'bg-white font-bold text-blue-600 shadow-xs' : 'text-slate-600 hover:bg-white'
+                      }`}
+                    >
+                      크게
+                    </button>
+                    <button
+                      onClick={() => setFermatHeight(620)}
+                      className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+                        fermatHeight === 620 ? 'bg-white font-bold text-blue-600 shadow-xs' : 'text-slate-600 hover:bg-white'
+                      }`}
+                    >
+                      특대
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => setAnsFermatQ(!ansFermatQ)}
+                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-lg border border-blue-200 transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Lightbulb className="w-3.5 h-3.5" />
+                    <span>{ansFermatQ ? '120° 정답 접기' : '120° 이상 정답'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-xs sm:text-sm text-slate-600 mb-3">
+                세 마을 <MathView tex="A, B, C" />의 도로망 총합(<MathView tex="PA + PB + PC" />)을 최소화하는 지점입니다. 꼭짓점을 드래그하여 각도가 변할 때 페르마 점의 이동을 관찰하세요.
+              </p>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-7 bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col">
+                  <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-200 mb-2 text-xs flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <ZoomIn className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="font-medium text-slate-700">도형 배율:</span>
+                      <input
+                        type="range"
+                        min="0.35"
+                        max="1.3"
+                        step="0.05"
+                        value={fermatZoom}
+                        onChange={(e) => setFermatZoom(parseFloat(e.target.value))}
+                        className="w-24 sm:w-36 accent-blue-600 cursor-pointer"
+                      />
+                      <span className="font-mono text-blue-600 font-bold w-10">
+                        {Math.round(fermatZoom * 100)}%
+                      </span>
+                    </div>
+                    <button
+                      onClick={resetFermatPositions}
+                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 font-medium transition cursor-pointer flex items-center gap-1"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>위치 초기화</span>
+                    </button>
+                  </div>
+
+                  {/* 가변 높이 캔버스 컨테이너 */}
+                  <div
+                    className="w-full bg-white rounded-lg overflow-hidden border border-slate-200 relative transition-all duration-200 touch-none cursor-grab"
+                    style={{ height: `${fermatHeight}px` }}
+                    onPointerDown={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = e.clientX - rect.left;
+                      const y = e.clientY - rect.top;
+                      const cx = rect.width / 2;
+                      const cy = rect.height / 2;
+                      const baseDim = Math.min(rect.width, rect.height);
+
+                      fPoints.forEach((p, idx) => {
+                        const px = cx + p.rx * baseDim * fermatZoom;
+                        const py = cy + p.ry * baseDim * fermatZoom;
+                        if (Math.hypot(px - x, py - y) < 30) {
+                          dragFermatIdxRef.current = idx;
+                        }
+                      });
+                    }}
+                    onPointerMove={(e) => {
+                      if (dragFermatIdxRef.current === -1) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const cx = rect.width / 2;
+                      const cy = rect.height / 2;
+                      const baseDim = Math.min(rect.width, rect.height);
+
+                      const x = e.clientX - rect.left;
+                      const y = e.clientY - rect.top;
+
+                      const nextPts = [...fPoints];
+                      nextPts[dragFermatIdxRef.current] = {
+                        ...nextPts[dragFermatIdxRef.current],
+                        rx: (x - cx) / (baseDim * fermatZoom),
+                        ry: (y - cy) / (baseDim * fermatZoom),
+                      };
+                      setFPoints(nextPts);
+                    }}
+                    onPointerUp={() => {
+                      dragFermatIdxRef.current = -1;
+                    }}
+                  >
+                    <canvas ref={fermatCanvasRef} className="w-full h-full block" />
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap justify-between items-center text-xs gap-2">
+                    <span
+                      className={`px-2.5 py-1 rounded font-semibold ${
+                        fermatMaxAngle >= 120
+                          ? 'bg-rose-100 text-rose-800 font-bold'
+                          : 'bg-emerald-100 text-emerald-800 font-bold'
+                      }`}
+                    >
+                      최대 내각: {fermatMaxAngle.toFixed(1)}° {fermatMaxAngle >= 120 ? '(≥ 120°: 꼭짓점이 페르마 점!)' : '(< 120°: 내부 120° 점 형성)'}
+                    </span>
+                    <span className="text-slate-500">
+                      <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full mr-1"></span>
+                      빨간 점 = 페르마 점 <MathView tex="P" />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-5 flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
+                      <span className="font-bold">🧼 비눗방울 막(표면장력)의 최적화 해답</span>
+                      <br />
+                      비눗방울은 스스로 표면적(에너지)을 최소화합니다. 기둥 사이의 비눗막은 자연스럽게 <strong className="text-amber-950 font-mono">120°</strong>를 이루며 만납니다.
+                    </div>
+
+                    {ansFermatQ && (
+                      <div className="p-4 bg-blue-50 border-l-4 border-blue-600 rounded-r-xl text-xs text-slate-800 space-y-2 animate-fadeIn">
+                        <p className="font-bold text-blue-900">Q. 한 각이 120도 이상일 때는 어떻게 될까요?</p>
+                        <p className="leading-relaxed">
+                          삼각형 내부에 세 꼭짓점을 모두 120도로 바라보는 점이 존재하지 않습니다. 따라서 <strong>120도 이상인 그 둔각 꼭짓점 자체</strong>가 거리의 합을 최소로 만드는 페르마 점이 됩니다.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                    <h3 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1">
+                      <Route className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>정사각형 네 마을 슈타이너 트리 비교 (한 변 = 1)</span>
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 text-center text-xs">
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                        <div className="font-bold text-slate-700 mb-1">대각선 X자 교점</div>
+                        <div className="text-slate-500 font-mono">총 길이 = <MathView tex="2\sqrt{2}" /></div>
+                        <div className="text-rose-600 font-bold mt-1 text-sm">약 2.828</div>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-lg border border-indigo-200 bg-indigo-50/40">
+                        <div className="font-bold text-indigo-900 mb-1">H자 슈타이너 트리</div>
+                        <div className="text-slate-500 font-mono">총 길이 = <MathView tex="1 + \sqrt{3}" /></div>
+                        <div className="text-emerald-600 font-bold mt-1 text-sm">약 2.732 (최적)</div>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2 text-center">
+                      페르마 점 2개를 사용한 H자 형태가 약 <strong>3.4% 더 짧습니다</strong>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* [SECTION 2] 감염병 확산과 네트워크 모델링                          */}
+        {/* ================================================================= */}
+        {activeSection === 't2' && (
+          <div className="space-y-6">
+            {/* 1. 네트워크 & 인접행렬 */}
+            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+              <div className="flex items-center justify-between border-b pb-3 mb-4 flex-wrap gap-2">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="w-7 h-7 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm font-bold">
+                    1
+                  </span>
+                  인접 행렬(Adjacency Matrix)과 악수 정리
+                </h2>
+                <button
+                  onClick={() => setAnsNetMat(!ansNetMat)}
+                  className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold rounded-lg border border-indigo-200 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  <span>{ansNetMat ? '정답 접기' : '정답'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                <div className="lg:col-span-6 space-y-3">
+                  <p className="text-xs sm:text-sm text-slate-600">
+                    워크북에 제시된 <MathView tex="A, B, C, D" /> 4개 노드의 인접 행렬입니다.
+                  </p>
+                  <div className="bg-slate-900 text-slate-100 p-4 rounded-xl font-mono text-xs overflow-x-auto shadow-inner">
+                    <table className="w-full text-center">
+                      <thead>
+                        <tr className="border-b border-slate-700 text-slate-400">
+                          <th className="pb-1">노드</th>
+                          <th className="pb-1">A</th>
+                          <th className="pb-1">B</th>
+                          <th className="pb-1">C</th>
+                          <th className="pb-1">D</th>
+                          <th className="pb-1 text-emerald-400">차수(Degree)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-slate-800">
+                          <td className="font-bold text-blue-400 py-1">A</td>
+                          <td>0</td>
+                          <td>1</td>
+                          <td>1</td>
+                          <td>0</td>
+                          <td className="text-emerald-400 font-bold">2</td>
+                        </tr>
+                        <tr className="border-b border-slate-800">
+                          <td className="font-bold text-blue-400 py-1">B</td>
+                          <td>1</td>
+                          <td>0</td>
+                          <td>1</td>
+                          <td>1</td>
+                          <td className="text-emerald-400 font-bold">3</td>
+                        </tr>
+                        <tr className="border-b border-slate-800">
+                          <td className="font-bold text-blue-400 py-1">C</td>
+                          <td>1</td>
+                          <td>1</td>
+                          <td>0</td>
+                          <td>1</td>
+                          <td className="text-emerald-400 font-bold">3</td>
+                        </tr>
+                        <tr>
+                          <td className="font-bold text-blue-400 py-1">D</td>
+                          <td>0</td>
+                          <td>1</td>
+                          <td>1</td>
+                          <td>0</td>
+                          <td className="text-emerald-400 font-bold">2</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {ansNetMat && (
+                    <div className="p-4 bg-indigo-50 border-l-4 border-indigo-600 rounded-r-xl text-xs sm:text-sm text-slate-800 space-y-2 animate-fadeIn">
+                      <p className="font-bold text-indigo-950">💡 공식 및 정답</p>
+                      <p>• 각 노드의 차수 합: <MathView tex="2 + 3 + 3 + 2 = 10" /></p>
+                      <p>• 총 엣지(연결선) 수: 5개 (<MathView tex="AB, AC, BC, BD, CD" />)</p>
+                      <p className="text-indigo-700 font-bold">
+                        차수의 총합 = <MathView tex="2 \times (\text{엣지의 수})" /> (악수 정리, Handshaking Lemma)
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="lg:col-span-6 bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <div
+                    className="w-full bg-white rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] relative touch-none cursor-grab"
+                    onPointerDown={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = e.clientX - rect.left;
+                      const y = e.clientY - rect.top;
+                      netNodes.forEach((n, idx) => {
+                        if (Math.hypot(n.rx * rect.width - x, n.ry * rect.height - y) < 26) {
+                          dragNetIdxRef.current = idx;
+                        }
+                      });
+                    }}
+                    onPointerMove={(e) => {
+                      if (dragNetIdxRef.current === -1) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = Math.max(25, Math.min(rect.width - 25, e.clientX - rect.left));
+                      const y = Math.max(25, Math.min(rect.height - 25, e.clientY - rect.top));
+                      const nextNodes = [...netNodes];
+                      nextNodes[dragNetIdxRef.current] = {
+                        ...nextNodes[dragNetIdxRef.current],
+                        rx: x / rect.width,
+                        ry: y / rect.height,
+                      };
+                      setNetNodes(nextNodes);
+                    }}
+                    onPointerUp={() => {
+                      dragNetIdxRef.current = -1;
+                    }}
+                  >
+                    <canvas ref={graphCanvasRef} className="w-full h-full block" />
+                  </div>
+                  <p className="text-[11px] text-slate-500 text-center mt-2">
+                    노드를 마우스나 손가락으로 드래그하여 네트워크 형태를 조작해보세요.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. 지수적 폭발 & 소문의 확산 */}
+            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+              <div className="flex items-center justify-between border-b pb-3 mb-4 flex-wrap gap-2">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="w-7 h-7 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm font-bold">
+                    2
+                  </span>
+                  지수적 폭발 (소문의 확산 속도)
+                </h2>
+                <button
+                  onClick={() => setAnsRumor(!ansRumor)}
+                  className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold rounded-lg border border-indigo-200 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  <span>{ansRumor ? '정답 접기' : '정답'}</span>
+                </button>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-xl text-xs sm:text-sm text-slate-700 space-y-1">
+                <p>
+                  <strong>상황:</strong> 1명이 비밀을 알고 있고, 1시간마다 알고 있는 사람이 각자 새로운 3명에게 소문을 퍼뜨린다.
+                </p>
+                <p className="text-slate-500 text-xs">
+                  Q1. 소문이 전파되는 식 / Q2. 인구 100만 명 도시에 모두 퍼지는 데 걸리는 시간?
+                </p>
+              </div>
+
+              {ansRumor && (
+                <div className="mt-3 p-4 bg-indigo-50 border-l-4 border-indigo-600 rounded-r-xl text-xs sm:text-sm text-slate-800 space-y-2 animate-fadeIn">
+                  <p>
+                    <strong>Q1 전파 식:</strong> <MathView tex="N(t) = 4^t" /> (기존 1명이 3명을 추가하므로 매시간마다 인원이 4배씩 증가)
+                  </p>
+                  <p>
+                    <strong>Q2 100만 명 돌파 시간:</strong>
+                  </p>
+                  <p className="leading-relaxed">
+                    <MathView tex="4^t \ge 1,000,000 \implies 2^{2t} \ge 10^6" />.<br />
+                    <MathView tex="2^{10} = 1,024" />, <MathView tex="2^{20} = 1,048,576" /> 이므로 <MathView tex="2t = 20 \implies t = \mathbf{10\text{시간}}" />이면 100만 명에게 전파 완료!
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 3. R0 시뮬레이터 & 기본 표 */}
+            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+              <div className="flex flex-wrap items-center justify-between border-b pb-3 mb-4 gap-2">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span className="w-7 h-7 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm font-bold">
+                      3
+                    </span>
+                    기초감염재생산수(<MathView tex="R_0" />)와 지수곡선 비교
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    방역 조치에 따른 <MathView tex="R_0" /> 값의 변화가 감염자 수에 미치는 영향을 비교합니다.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setAnsR0Table(!ansR0Table)}
+                  className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold rounded-lg border border-indigo-200 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  <span>{ansR0Table ? '표 정답 접기' : '워크북 3번 표 정답'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                <div className="lg:col-span-4 space-y-4">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <div>
+                      <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                        <span>상황 A (방역 미실시): <MathView tex="R_0" /></span>
+                        <span className="text-red-600 font-mono font-bold">{sliderR0A.toFixed(1)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1.5"
+                        max="4.0"
+                        step="0.1"
+                        value={sliderR0A}
+                        onChange={(e) => setSliderR0A(parseFloat(e.target.value))}
+                        className="w-full accent-red-600 cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200">
+                      <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                        <span>상황 B (거리두기 실시): <MathView tex="R_0" /></span>
+                        <span className="text-blue-600 font-mono font-bold">{sliderR0B.toFixed(2)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.3"
+                        max="1.3"
+                        step="0.05"
+                        value={sliderR0B}
+                        onChange={(e) => setSliderR0B(parseFloat(e.target.value))}
+                        className="w-full accent-blue-600 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 leading-relaxed">
+                    <strong className="flex items-center gap-1 text-red-700 mb-1">
+                      <TriangleAlert className="w-3.5 h-3.5" />
+                      <span>의료 수용 한계선 (점선)</span>
+                    </strong>
+                    <MathView tex="R_0 > 1" />이면 단 몇 단계 만에 지수 폭발이 일어나 의료 붕괴가 발생합니다. 거리두기를 통해 <MathView tex="R_0 < 1" />로 억제해야 자연 소멸합니다.
+                  </div>
+                </div>
+
+                <div className="lg:col-span-8 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <div className="w-full bg-white rounded-lg p-2 aspect-[16/9] relative border border-slate-200">
+                    <canvas ref={r0CanvasRef} className="w-full h-full block" />
+                  </div>
+                </div>
+              </div>
+
+              {ansR0Table && (
+                <div className="mt-4 pt-4 border-t border-slate-200 text-xs animate-fadeIn">
+                  <div className="bg-indigo-50/70 p-4 rounded-xl border border-indigo-100 leading-relaxed">
+                    <h4 className="font-bold text-indigo-900 mb-2">📋 워크북 표 채우기 정답</h4>
+                    <ul className="space-y-1.5 text-slate-700 font-sans">
+                      <li>• <strong>상황 A (<MathView tex="R_0=3" />):</strong> 1 → 3 → 9 → <strong className="text-red-600 font-bold">27</strong> → <strong className="text-red-600 font-bold">81</strong> → <strong className="text-red-600 font-bold">243</strong>명</li>
+                      <li>• <strong>상황 B (<MathView tex="R_0=0.8" />):</strong> 1 → 0.8 → 0.64 → <strong className="text-blue-600 font-bold">0.512</strong> → <strong className="text-blue-600 font-bold">0.4096</strong> → <strong className="text-blue-600 font-bold">0.32768</strong>명</li>
+                      <li>• 5단계 만에 두 상황의 차이는 약 <strong className="text-indigo-950 font-bold">741.5배</strong>가 됨.</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 4. 백신 우선 접종 질문 (허브 vs 무작위) */}
+            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+              <div className="flex items-center justify-between border-b pb-3 mb-4 flex-wrap gap-2">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="w-7 h-7 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm font-bold">
+                    4
+                  </span>
+                  백신 10명분 우선 접종 전략 (허브 vs 무작위)
+                </h2>
+                <button
+                  onClick={() => setAnsVaccineHub(!ansVaccineHub)}
+                  className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold rounded-lg border border-indigo-200 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  <span>{ansVaccineHub ? '정답 접기' : '정답 및 네트워크 이유'}</span>
+                </button>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-xl text-xs sm:text-sm text-slate-700 leading-relaxed">
+                <strong className="text-slate-800">Q. 백신이 딱 10명분밖에 없습니다. 무작위로 줄까, 아니면 친구가 가장 많은 사람(허브)에게 줄까?</strong>
+                <br />
+                <span className="text-slate-600">네트워크 관점에서 이유를 서술하세요.</span>
+              </div>
+
+              {ansVaccineHub && (
+                <div className="mt-3 p-4 bg-indigo-50 border-l-4 border-indigo-600 rounded-r-xl text-xs sm:text-sm text-slate-800 space-y-2 animate-fadeIn">
+                  <p>
+                    <strong>[정답]</strong> 친구가 가장 많은 사람(<strong>허브, Hub</strong>)에게 접종해야 한다.
+                  </p>
+                  <p><strong>[네트워크 관점 서술]</strong></p>
+                  <p className="leading-relaxed">
+                    네트워크에서 허브는 수많은 노드와 연결(Edge)되어 있어 바이러스 전파의 핵심 교차로 역할을 합니다. 허브에 백신을 접종해 면역을 부여하면(노드 제거 효과), 허브를 통과하는 수많은 전파 경로가 일거에 끊어지며 <strong>네트워크가 작은 클러스터들로 분절(침투 임계 효과, Percolation Threshold)</strong>되어 대규모 확산을 원천 차단합니다. 반면 무작위 접종은 연결선이 적은 외곽 노드에 투입될 확률이 높아 방역 효율이 매우 낮습니다.
+                  </p>
+                  <div className="pt-2 text-indigo-900 border-t border-indigo-200 text-xs">
+                    • <strong>참고 (집단면역 임계치 <MathView tex="H_c = 1 - 1/R_0" />):</strong> 홍역(<MathView tex="R_0=15" />)은 약 <strong>93.3%</strong>, 독감(<MathView tex="R_0=2" />)은 <strong>50%</strong> 접종 필요
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 5. 신종 바이러스 '수학-26'의 확산을 막아라! */}
+            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+              <div className="flex flex-wrap items-center justify-between border-b pb-3 mb-4 gap-2">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span className="w-7 h-7 bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-sm font-bold">
+                      5
+                    </span>
+                    신종 바이러스 '수학-26'의 확산을 막아라! (정책 & SIR 예측 그래프)
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    조건: <MathView tex="R_0=4" />, 초기 감염자 1명, 도시 인구 1,000명
+                  </p>
+                </div>
+                <button
+                  onClick={() => setAnsMath26(!ansMath26)}
+                  className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-lg border border-red-200 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  <span>{ansMath26 ? '정답 접기' : '정책 빈칸 정답'}</span>
+                </button>
+              </div>
+
+              {/* 3개 정책 빈칸 카드 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+                <div className="p-3.5 bg-slate-50 border rounded-xl text-xs">
+                  <span className="font-bold text-slate-800">1. 접촉 횟수 제한(거리두기)</span>
+                  <div className="text-slate-600 mt-1 font-medium">
+                    ( <span className="font-mono text-red-600 font-bold text-sm">75% 초과 감소</span> ) 전략
+                  </div>
+                </div>
+                <div className="p-3.5 bg-slate-50 border rounded-xl text-xs">
+                  <span className="font-bold text-slate-800">2. 백신 우선 접종 대상선정</span>
+                  <div className="text-slate-600 mt-1 font-medium">
+                    ( <span className="font-mono text-red-600 font-bold text-sm">허브 / 중심성 높은</span> ) 노드 타겟팅
+                  </div>
+                </div>
+                <div className="p-3.5 bg-slate-50 border rounded-xl text-xs">
+                  <span className="font-bold text-slate-800">3. 정보 투명성 제고</span>
+                  <div className="text-slate-600 mt-1 font-medium">
+                    가짜 뉴스 차단 및 조기 검사 촉진
+                  </div>
+                </div>
+              </div>
+
+              {ansMath26 && (
+                <div className="mb-5 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl text-xs sm:text-sm text-slate-800 space-y-2 animate-fadeIn">
+                  <p className="font-bold text-red-950">💡 정책 수립 정답 및 수식 근거</p>
+                  <ul className="space-y-1.5 leading-relaxed">
+                    <li>
+                      • <strong>1. 접촉 횟수 제한:</strong> <strong>75% 초과 (또는 75% 이상 / 80%)</strong> 감소 전략
+                      <span className="text-slate-500 block text-xs mt-0.5">
+                        (<MathView tex="R_0 = 4" />이므로 유효 전파를 1 미만(<MathView tex="R < 1" />)으로 만들려면 접촉을 <MathView tex="\frac{1}{4}" /> 미만으로 줄여야 함)
+                      </span>
+                    </li>
+                    <li>
+                      • <strong>2. 백신 우선 접종 대상:</strong> <strong>허브(Hub) / 연결 중심성이 높은</strong> 노드 타겟팅
+                    </li>
+                    <li>
+                      • <strong>3. 정보 투명성:</strong> 왜곡된 정보 허브 격리 및 자발적 격리 참여율 제고
+                    </li>
+                  </ul>
+                </div>
+              )}
+
+              {/* SIR 예측 그래프 영역 */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4 text-blue-600" />
+                      <span>[예측 그래프] 방역 정책 적용 전 vs 적용 후 SIR 동적 시뮬레이션</span>
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      당신의 정책(거리두기 75%↑ + 허브 접종)을 적용했을 때 곡선의 변화를 즉시 확인하세요.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSirMode('before')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                        sirMode === 'before'
+                          ? 'bg-red-600 text-white shadow-sm'
+                          : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'
+                      }`}
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5" />
+                      <span>정책 미적용 (<MathView tex="R_0=4" />)</span>
+                    </button>
+                    <button
+                      onClick={() => setSirMode('after')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                        sirMode === 'after'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'
+                      }`}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>정책 적용 (<MathView tex="R < 1" />)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="w-full bg-white rounded-lg p-2 aspect-[16/8] relative border border-slate-200">
+                  <canvas ref={sirCanvasRef} className="w-full h-full block" />
+                </div>
+
+                {/* 예측 그래프 해석 요약 카드 */}
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-red-50/80 border border-red-100 rounded-lg text-red-950">
+                    <strong className="text-red-700 block mb-1">❌ 정책 미적용 시 (뾰족한 피크 그래프)</strong>
+                    짧은 시간(약 15~20일 차)에 감염자(<MathView tex="I" />)가 폭증하여 병원 수용 한계(200명)를 뚫고 올라가 의료 시스템이 붕괴됩니다.
+                  </div>
+                  <div className="p-3 bg-emerald-50/80 border border-emerald-100 rounded-lg text-emerald-950">
+                    <strong className="text-emerald-700 block mb-1">✅ 정책 적용 시 (평탄화된 안전 그래프)</strong>
+                    거리두기(75% 감소)와 허브 백신 접종으로 <MathView tex="R < 1" />이 되어 감염자 피크가 거의 발생하지 않고 수용 한계선 아래에서 안전하게 자연 소멸합니다.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-slate-200 py-4 px-4 text-center text-xs text-slate-500">
+        2026 중등수학 영재교육원 · 기하 최적화 & 감염병 확산 인터랙티브 수업 플랫폼
+      </footer>
+    </div>
+  );
+};

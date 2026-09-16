@@ -5,11 +5,12 @@ import { FermatTab } from './FermatTab';
 import { TorricelliTab } from './TorricelliTab';
 import { BubbleTab } from './BubbleTab';
 import { CityGameTab } from './CityGameTab';
-import { Home, Compass, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Compass, ArrowRight, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
 
 interface GeometryLabProps {
   onGoHome: () => void;
   onSwitchToDiffusion: () => void;
+  onOpenWorkbook?: () => void;
 }
 
 type GeometryTabKey = 'heron' | 'billiards' | 'fermat' | 'torricelli' | 'bubble' | 'city';
@@ -17,6 +18,7 @@ type GeometryTabKey = 'heron' | 'billiards' | 'fermat' | 'torricelli' | 'bubble'
 export const GeometryLab: React.FC<GeometryLabProps> = ({
   onGoHome,
   onSwitchToDiffusion,
+  onOpenWorkbook,
 }) => {
   const [activeTab, setActiveTab] = useState<GeometryTabKey>('heron');
 
@@ -57,6 +59,17 @@ export const GeometryLab: React.FC<GeometryLabProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenWorkbook && (
+              <button
+                onClick={onOpenWorkbook}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
+                title="수업용 교재 정답 및 해설 워크북 열기"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>교재 정답 & 워크북</span>
+              </button>
+            )}
+
             <button
               onClick={onSwitchToDiffusion}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1B4468] hover:bg-[#2C567F] text-[#7FC4EE] text-xs font-semibold transition-colors cursor-pointer"
