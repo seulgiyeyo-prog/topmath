@@ -67,18 +67,22 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
       </header>
 
       {/* Main Course Hero Selection */}
-      <section className="max-w-6xl mx-auto px-5 pt-8 pb-4 text-center">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-serif text-[#EAF3FC] tracking-tight">
-          탐구할 <span className="text-[#E7A93D]">수학 실험실</span>을 선택하세요
+      <section className="max-w-6xl mx-auto px-5 pt-10 pb-6 text-center">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/80 text-amber-400 text-xs font-semibold mb-4 shadow-xs">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>2026 중등수학 영재교육원 · 수학 탐구 실험실 포털</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
+          탐구할 <span className="bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 bg-clip-text text-transparent">수학 실험실</span>을 선택하세요
         </h1>
-        <p className="mt-3 text-sm sm:text-base text-[#9FC0DC] max-w-2xl mx-auto leading-relaxed">
+        <p className="mt-3.5 text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
           자연과 생명, 일상 속 숨겨진 수학적 원리를 직접 조작하고 시뮬레이션하는 인터랙티브 실험실입니다.{' '}
           기하 최적화(페르마 점), 네트워크 확산(감염병·소문), 생명현상(골절 치유) 중 오늘 탐구할 과정을 선택하세요.
         </p>
       </section>
 
       {/* Main Course Grid */}
-      <main className="relative max-w-6xl mx-auto px-5 mt-4 space-y-7">
+      <main className="relative max-w-6xl mx-auto px-5 mt-2 space-y-7">
         {/* NEW FEATURE CARD: 2026 중등영재 수학 워크북 & 교재 정답 확인관 */}
         <div className="bg-gradient-to-r from-[#0F2942] via-[#153A5C] to-[#0D253A] border-2 border-[#0284c7] rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden group hover:border-[#38bdf8] transition-all">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
@@ -93,7 +97,7 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
                 </span>
               </div>
 
-              <h2 className="text-xl sm:text-2xl font-bold font-serif text-white flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2 tracking-tight">
                 <span>📖 2026 인터랙티브 워크북 & 교재 정답 확인관</span>
               </h2>
 
@@ -127,7 +131,7 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
                 </span>
               </div>
 
-              <h2 className="text-xl sm:text-2xl font-bold font-serif text-white flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2 tracking-tight">
                 <span>💡 수학 영재 산출물 & 발표회 아이디어 익스텐더</span>
               </h2>
 
@@ -168,7 +172,7 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
                   📐
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold font-serif text-[#EAF3FC] group-hover:text-[#E7A93D] transition-colors">
+                  <h2 className="text-2xl font-bold text-[#EAF3FC] group-hover:text-[#E7A93D] transition-colors tracking-tight">
                     가장 짧은 길을 찾아서
                   </h2>
                   <div className="text-xs font-medium text-[#9FC0DC] mt-0.5">
@@ -264,7 +268,7 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
                   🦠
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold font-serif text-[#EAFBF6] group-hover:text-[#F2B84B] transition-colors">
+                  <h2 className="text-2xl font-bold text-[#EAFBF6] group-hover:text-[#F2B84B] transition-colors tracking-tight">
                     퍼져나가는 것들의 수학
                   </h2>
                   <div className="text-xs font-medium text-[#7DBFB0] mt-0.5">
@@ -378,7 +382,7 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
                   🦴
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold font-serif text-[#FAF5FF] group-hover:text-[#F472B6] transition-colors">
+                  <h2 className="text-2xl font-bold text-[#FAF5FF] group-hover:text-[#F472B6] transition-colors tracking-tight">
                     부러진 뼈가 붙는 수학
                   </h2>
                   <div className="text-xs font-medium text-[#D8B4FE] mt-0.5">
@@ -432,63 +436,6 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
           </div>
         </div>
       </main>
-
-      {/* Classroom Guide / Teaching Tips Section */}
-      <section className="max-w-6xl mx-auto px-5 mt-12">
-        <div className="bg-[#112338]/80 border border-[#2C567F]/80 rounded-2xl p-5 sm:p-6 text-xs sm:text-sm text-[#9FC0DC]">
-          <div className="flex items-center gap-2 text-[#E7A93D] font-bold text-sm mb-2 font-serif">
-            <BookOpen className="w-4 h-4" />
-            <span>선생님 & 학생을 위한 정규 수업 지도안 (Lesson Guidance)</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-            <div>
-              <div className="font-semibold text-[#EAF3FC] mb-1">
-                📌 [기하 최적화와 페르마 점]
-              </div>
-              <ul className="list-disc list-inside space-y-1.5 text-xs text-[#9FC0DC] leading-relaxed">
-                <li>
-                  <strong>1차시:</strong> 헤론의 최단 거리(선대칭 이동)와 당구대 2단 쿠션 게임.
-                </li>
-                <li>
-                  <strong>2차시:</strong> 페르마 점 작도와 토리첼리 3중 도르래 벡터 평형(120°), 비눗방울 슈타이너 X vs H.
-                </li>
-                <li>
-                  <strong>3차시:</strong> 도시 도로망 MST(다항 시간 P)와 외판원 순회 TSP(NP-Hard) 비교 챌린지.
-                </li>
-              </ul>
-            </div>
-            <div>
-              <div className="font-semibold text-[#EAF3FC] mb-1">
-                📌 [확산의 수학 - 감염병과 소문]
-              </div>
-              <ul className="list-disc list-inside space-y-1.5 text-xs text-[#9FC0DC] leading-relaxed">
-                <li>
-                  <strong>1차시:</strong> 오일러 그래프 이론과 다익스트라 최단 경로, 방화벽 브릿지 퍼즐.
-                </li>
-                <li>
-                  <strong>2차시:</strong> 지수 확산(R₀), 미분 순간 변화율, 방역 사령관 게임(Flatten the Curve) 및 SIR 모델.
-                </li>
-                <li>
-                  <strong>3차시:</strong> 집단면역 배틀 게임(7.5배 비밀 5단계 특강)과 SNS 가짜 뉴스 방어 턴제 게임.
-                </li>
-              </ul>
-            </div>
-            <div>
-              <div className="font-semibold text-[#EAF3FC] mb-1">
-                📌 [뼈가 붙는 수학 - 생명현상과 미분방정식]
-              </div>
-              <ul className="list-disc list-inside space-y-1.5 text-xs text-[#9FC0DC] leading-relaxed">
-                <li>
-                  <strong>1차시:</strong> 남은 치유 여력 (100−B)에 따른 로지스틱 S자 치유 곡선의 미분방정식 모델링 및 70일 완치 시뮬레이션.
-                </li>
-                <li>
-                  <strong>2차시:</strong> 혈종(H)→연성가골(S)→경성가골(C)→재형성(R) 4단계 연립미분방정식에서 가장 느린 계수가 전체 치유 속도를 좌우하는 '병목 구간(Rate-limiting step)'의 수학적 탐구.
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="mt-12 pt-8 pb-10 border-t border-[#1B4268] text-center text-xs text-[#7A9BB8] space-y-1">
