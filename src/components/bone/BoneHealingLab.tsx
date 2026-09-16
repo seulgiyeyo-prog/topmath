@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameState, MissionKey } from '../../types';
 import { HUD } from '../HUD';
 import { MathView } from '../MathView';
-import { Home, ArrowRight, Play, Pause, RotateCcw, Check, HelpCircle, Activity } from 'lucide-react';
+import { Home, ArrowRight, Play, Pause, RotateCcw, Check, HelpCircle, Activity, Lightbulb } from 'lucide-react';
 
 interface BoneHealingLabProps {
   gameState: GameState;
@@ -12,6 +12,7 @@ interface BoneHealingLabProps {
   onGoHome: () => void;
   onSwitchToGeometry: () => void;
   onSwitchToDiffusion: () => void;
+  onOpenIdeas?: () => void;
 }
 
 export const BoneHealingLab: React.FC<BoneHealingLabProps> = ({
@@ -22,6 +23,7 @@ export const BoneHealingLab: React.FC<BoneHealingLabProps> = ({
   onGoHome,
   onSwitchToGeometry,
   onSwitchToDiffusion,
+  onOpenIdeas,
 }) => {
   const [activeTab, setActiveTab] = useState<'logistic' | 'cascade'>('logistic');
 
@@ -415,6 +417,17 @@ export const BoneHealingLab: React.FC<BoneHealingLabProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenIdeas && (
+              <button
+                onClick={onOpenIdeas}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm hover:scale-105"
+                title="영재 발표회 산출물 아이디어 고민하기"
+              >
+                <Lightbulb className="w-3.5 h-3.5 text-yellow-200" />
+                <span>💡 산출물 아이디어</span>
+              </button>
+            )}
+
             <button
               onClick={onSwitchToGeometry}
               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#28153A] hover:bg-[#3E2156] text-[#E7A93D] text-xs font-semibold transition-colors cursor-pointer"

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Share2, Sparkles, Award, ArrowRight, BookOpen, Layers, Activity } from 'lucide-react';
+import { Compass, Share2, Sparkles, Award, ArrowRight, BookOpen, Layers, Activity, Lightbulb } from 'lucide-react';
 import { CourseId } from '../types';
 
 interface CourseSelectionPageProps {
@@ -39,6 +39,16 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* NEW BUTTON: 산출물 아이디어 고민하는 버튼 */}
+            <button
+              onClick={() => onSelectCourse('ideas')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:scale-105"
+              title="영재 발표회 산출물 아이디어 고민 및 3분 발표 타임라인 기획"
+            >
+              <Lightbulb className="w-3.5 h-3.5 text-yellow-200" />
+              <span>💡 산출물 아이디어 고민하기</span>
+            </button>
+
             <button
               onClick={() => onSelectCourse('workbook')}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:scale-105"
@@ -98,6 +108,40 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#2563eb] hover:from-[#0369a1] hover:to-[#1d4ed8] text-white font-bold text-sm shadow-xl transition-all cursor-pointer hover:scale-105 shrink-0"
             >
               <span>교재 워크북 & 정답관 열기</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* NEW FEATURE CARD: 2026 수학 영재 산출물 & 발표회 아이디어 익스텐더 */}
+        <div className="bg-gradient-to-r from-[#171638] via-[#1E1B4B] to-[#0F172A] border-2 border-indigo-500/70 rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden group hover:border-indigo-400 transition-all">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-3 py-1 rounded-full bg-indigo-500/30 border border-indigo-400/50 text-indigo-300 text-xs font-bold font-mono flex items-center gap-1.5">
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+                  <span>영재원 산출물 & 발표회 기획 엔진</span>
+                </span>
+                <span className="px-2.5 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[11px] font-bold">
+                  ✨ 11대 영재 추천 주제 & 자동 기획서 생성
+                </span>
+              </div>
+
+              <h2 className="text-xl sm:text-2xl font-bold font-serif text-white flex items-center gap-2">
+                <span>💡 수학 영재 산출물 & 발표회 아이디어 익스텐더</span>
+              </h2>
+
+              <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
+                <strong>몬티홀의 역설, 님 게임 필승법, 미우라 접기, 3D 멩거 스펀지, 보로노이 지도, 페르마 점 비누막, 골절 치유 로지스틱</strong> 등 
+                영재원 산출물 주제를 <strong>중등 연계 개념, 30초 오프닝 훅, 청중 참여형 데모, 실물 교구/SW 산출물 확장, 3분 발표 타임라인</strong>으로 즉시 체계화합니다.
+              </p>
+            </div>
+
+            <button
+              onClick={() => onSelectCourse('ideas')}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-bold text-sm shadow-xl transition-all cursor-pointer hover:scale-105 shrink-0"
+            >
+              <span>산출물 아이디어 고민하기</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -445,6 +489,14 @@ export const CourseSelectionPage: React.FC<CourseSelectionPageProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="mt-12 pt-8 pb-10 border-t border-[#1B4268] text-center text-xs text-[#7A9BB8] space-y-1">
+        <div>2026 중등수학 영재교육원 · 기하 최적화 &amp; 감염병 확산 &amp; 생체수학 융합 플랫폼</div>
+        <div className="text-[#9FC0DC] font-medium tracking-wide">
+          Development &amp; Design: Seulgi Jeong
+        </div>
+      </footer>
     </div>
   );
 };

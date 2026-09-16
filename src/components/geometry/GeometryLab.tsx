@@ -5,12 +5,13 @@ import { FermatTab } from './FermatTab';
 import { TorricelliTab } from './TorricelliTab';
 import { BubbleTab } from './BubbleTab';
 import { CityGameTab } from './CityGameTab';
-import { Home, Compass, ArrowRight, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
+import { Home, Compass, ArrowRight, ChevronLeft, ChevronRight, BookOpen, Lightbulb } from 'lucide-react';
 
 interface GeometryLabProps {
   onGoHome: () => void;
   onSwitchToDiffusion: () => void;
   onOpenWorkbook?: () => void;
+  onOpenIdeas?: () => void;
 }
 
 type GeometryTabKey = 'heron' | 'billiards' | 'fermat' | 'torricelli' | 'bubble' | 'city';
@@ -19,6 +20,7 @@ export const GeometryLab: React.FC<GeometryLabProps> = ({
   onGoHome,
   onSwitchToDiffusion,
   onOpenWorkbook,
+  onOpenIdeas,
 }) => {
   const [activeTab, setActiveTab] = useState<GeometryTabKey>('heron');
 
@@ -59,6 +61,17 @@ export const GeometryLab: React.FC<GeometryLabProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenIdeas && (
+              <button
+                onClick={onOpenIdeas}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm hover:scale-105"
+                title="영재 발표회 산출물 아이디어 고민하기"
+              >
+                <Lightbulb className="w-3.5 h-3.5 text-yellow-200" />
+                <span>💡 산출물 아이디어</span>
+              </button>
+            )}
+
             {onOpenWorkbook && (
               <button
                 onClick={onOpenWorkbook}

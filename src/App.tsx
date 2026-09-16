@@ -5,6 +5,7 @@ import { DiffusionLab } from './components/DiffusionLab';
 import { GeometryLab } from './components/geometry/GeometryLab';
 import { BoneHealingLab } from './components/bone/BoneHealingLab';
 import { WorkbookPage } from './components/workbook/WorkbookPage';
+import { IdeaExtenderPage } from './components/ideas/IdeaExtenderPage';
 
 interface ToastItem {
   id: string;
@@ -14,13 +15,14 @@ interface ToastItem {
 }
 
 export default function App() {
-  // Read initial course from URL hash if available (#diffusion or #geometry or #bone or #workbook)
+  // Read initial course from URL hash if available (#diffusion or #geometry or #bone or #workbook or #ideas)
   const getInitialCourse = (): CourseId => {
     const hash = window.location.hash.replace('#', '');
     if (hash === 'diffusion') return 'diffusion';
     if (hash === 'geometry') return 'geometry';
     if (hash === 'bone') return 'bone';
     if (hash === 'workbook') return 'workbook';
+    if (hash === 'ideas') return 'ideas';
     return 'home';
   };
 
@@ -75,6 +77,7 @@ export default function App() {
       else if (hash === 'geometry') setCurrentCourse('geometry');
       else if (hash === 'bone') setCurrentCourse('bone');
       else if (hash === 'workbook') setCurrentCourse('workbook');
+      else if (hash === 'ideas') setCurrentCourse('ideas');
       else setCurrentCourse('home');
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -268,6 +271,7 @@ export default function App() {
           onGoHome={() => setCourse('home')}
           onSwitchToGeometry={() => setCourse('geometry')}
           onOpenWorkbook={() => setCourse('workbook')}
+          onOpenIdeas={() => setCourse('ideas')}
         />
       )}
 
@@ -276,6 +280,7 @@ export default function App() {
           onGoHome={() => setCourse('home')}
           onSwitchToDiffusion={() => setCourse('diffusion')}
           onOpenWorkbook={() => setCourse('workbook')}
+          onOpenIdeas={() => setCourse('ideas')}
         />
       )}
 
@@ -288,6 +293,7 @@ export default function App() {
           onGoHome={() => setCourse('home')}
           onSwitchToGeometry={() => setCourse('geometry')}
           onSwitchToDiffusion={() => setCourse('diffusion')}
+          onOpenIdeas={() => setCourse('ideas')}
         />
       )}
 
@@ -296,6 +302,14 @@ export default function App() {
           onGoHome={() => setCourse('home')}
           onSwitchToGeometry={() => setCourse('geometry')}
           onSwitchToDiffusion={() => setCourse('diffusion')}
+          onOpenIdeas={() => setCourse('ideas')}
+        />
+      )}
+
+      {currentCourse === 'ideas' && (
+        <IdeaExtenderPage
+          onGoHome={() => setCourse('home')}
+          onSelectCourse={(course) => setCourse(course)}
         />
       )}
     </>

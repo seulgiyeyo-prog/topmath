@@ -11,7 +11,7 @@ import { SirModelTab } from './SirModelTab';
 import { HerdImmunityTab } from './HerdImmunityTab';
 import { FakeNewsGameTab } from './FakeNewsGameTab';
 import { MiddleSchoolExplainModal } from './MiddleSchoolExplainModal';
-import { Check, BookOpen, Home, ArrowRight, Share2, ChevronLeft, ChevronRight, LayoutGrid, SlidersHorizontal } from 'lucide-react';
+import { Check, BookOpen, Home, ArrowRight, Share2, ChevronLeft, ChevronRight, LayoutGrid, SlidersHorizontal, Lightbulb } from 'lucide-react';
 
 interface DiffusionLabProps {
   gameState: GameState;
@@ -22,6 +22,7 @@ interface DiffusionLabProps {
   onGoHome: () => void;
   onSwitchToGeometry: () => void;
   onOpenWorkbook?: () => void;
+  onOpenIdeas?: () => void;
 }
 
 export const DiffusionLab: React.FC<DiffusionLabProps> = ({
@@ -33,6 +34,7 @@ export const DiffusionLab: React.FC<DiffusionLabProps> = ({
   onGoHome,
   onSwitchToGeometry,
   onOpenWorkbook,
+  onOpenIdeas,
 }) => {
   const [activeTab, setActiveTab] = useState<MissionKey>('herd');
   const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
@@ -125,6 +127,17 @@ export const DiffusionLab: React.FC<DiffusionLabProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenIdeas && (
+              <button
+                onClick={onOpenIdeas}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm hover:scale-105"
+                title="영재 발표회 산출물 아이디어 고민하기"
+              >
+                <Lightbulb className="w-3.5 h-3.5 text-yellow-200" />
+                <span>💡 산출물 아이디어</span>
+              </button>
+            )}
+
             {onOpenWorkbook && (
               <button
                 onClick={onOpenWorkbook}
